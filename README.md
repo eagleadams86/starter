@@ -132,6 +132,13 @@ still reports "all 3 tests pass".
 - **Find needs two characters.** One matches most of the data, and that list is worse than no
   list; the placeholder and the empty message both say so. The cap reports what it dropped
   rather than truncating silently.
+- **The Find window's CSS block is the family's, verbatim.** 700px on 18px of padding, and
+  every property of what it shows — the heading, the intro line, the box, the hit and its
+  three lines, the "Nothing matches" line — declared inside that block rather than borrowed
+  from `.hint` or `dialog p`. Six apps carry it byte for byte (2026-08-23); copy it as it is,
+  and if you change it, change it in all six. It deliberately declares no dialog chrome:
+  backdrop, shadow and max-height belong to the base `dialog` rule and are shared with every
+  other window.
 - **If you swap the SVG chart for a CANVAS**, the print CSS stops being enough — a canvas is
   painted once from `getComputedStyle` and print-media values are invisible to it. Swap
   `data-theme` on `beforeprint`, re-render, put it back on `afterprint`, save nothing. See
