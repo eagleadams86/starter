@@ -63,7 +63,7 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 | **Copy / ⬇ CSV** | On the table, reading the RENDERED DOM so the export is what you're looking at; formula cells defused, thousands quoted |
 | **Settings** | A dialog of real settings that survive Start Again |
 | **Share** | `#share=` links, deflate-raw + base64url, a trimmed pure-function payload, and a read-only view that strips every edit surface |
-| **Back up** | The family's dialog — JSON, CSV with formula cells defused, and Start Again folded in behind a disclosure |
+| **Back up** | The family's window, identical in all six apps — 700px on 18px padding, JSON, CSV with formula cells defused, and Start Again folded in behind a disclosure |
 | **Delete all data** | The family's confirmation, identical in all six apps: 560px on 18px padding, the count of what is going, and **Download Backup First** at the far left — the one route back, which a `confirm()` cannot hold a button for |
 | **Install** | `manifest.webmanifest`, three PNG icons from `make_icons.py`, `manifest-src 'self'` |
 | **Offline** | `sw.js` network-first over a pinned public-files-only shell, plus `sw-kill.js` |

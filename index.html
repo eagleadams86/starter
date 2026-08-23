@@ -270,6 +270,13 @@
      from the page — every secondary button in this family — that information IS
      the border. Never fix a weak control edge locally: that is the drift the
      pack exists to prevent. */
+  /* The family's control reset, and the starter was the one app without it. A
+     button that does not inherit `font` keeps the UA's `line-height: normal`, so
+     it came out 38.5px — its --control-h floor — where the identical button in
+     the other five apps stands at 40. The header row is unaffected: --lh-base is
+     unitless, so a 13px chrome button computes 19.5px and still lands on its own
+     30px floor. */
+  button, select, input, textarea { font: inherit; color: inherit; }
   button { background: var(--surface-alt); color: var(--text-primary);
            border: 1px solid var(--border-control); border-radius: var(--radius-sm);
            padding: 7px 12px; font-size: var(--fs-base); cursor: pointer;
@@ -583,12 +590,11 @@
   dialog:focus { outline: none; }
   /* A dialog heading is --fs-md — the same step as a card heading, by the role
      contract — and an h2, as in every sibling. */
-  dialog h2 { margin: 0 0 var(--sp-5); font-size: var(--fs-md); }
+  dialog h2 { margin: 0 0 var(--sp-5); font-size: var(--fs-md); font-weight: var(--fw-semibold); }
   dialog p { font-size: var(--fs-xs); color: var(--text-secondary); }
   .row-actions { display: flex; flex-wrap: wrap; gap: var(--sp-4);
                  justify-content: flex-end; margin-top: var(--sp-6); }
   .row-actions .spacer { flex: 1 1 auto; }
-  .dlg-sep { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
   /* "Start again" is folded into the Back up dialog in every app in this family,
      and the header button stays "Back Up". Offering a destructive action without
      the thing that makes it safe — a backup you can take at the moment of
@@ -598,7 +604,7 @@
      through to `details > summary`, rendering in --accent — the one app whose
      delete-everything toggle was painted the same colour as a link. */
   details > summary { cursor: pointer; color: var(--accent); font-size: var(--fs-xs); }
-  details.danger-zone { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 12px; }
+  details.danger-zone { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
   details.danger-zone > summary { cursor: pointer; font-size: var(--fs-xs);
                                   font-weight: var(--fw-semibold); color: var(--text-secondary); }
   details.danger-zone > summary:hover { color: var(--text-primary); }
@@ -609,6 +615,18 @@
      the right and, on a phone, gives the backup button a row of its own rather
      than wrapping its own label in half beside them. A new app inherits it from
      here — that is the point of the starter. */
+  /* ── Back Up & Restore: the family's window ────────────────────────────────
+     One window across six apps (2026-08-23) — PAPTrack's, to the pixel. What
+     varies between the apps is the CONTENT (what a backup holds, which extra
+     buttons the app offers), never the frame around it. A new app inherits the
+     block from here; keep it in step with PAPTrack, Sprint Predictability, Flow
+     Metrics, Golf Handicap and Money Map. */
+  #dataDialog { max-width: 700px; padding: 18px; }
+  #dataDialog p { font-size: var(--fs-xs); color: var(--text-secondary); margin: 0 0 12px; }
+  #dataDialog hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+  #dataDialog .datarow { display: flex; gap: 10px; flex-wrap: wrap; margin: 0; }
+  #dataDialog details.danger-zone > p { margin: 10px 0 12px; }
+  #dataDialog .datafoot { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 14px; }
   #clearDialog { padding: 18px; }
   .clearfoot { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 14px; }
   .clearfoot .safety { margin-right: auto; }
@@ -1006,30 +1024,30 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
   <p>One JSON file holding every entry and setting — a copy you keep, independent of this
     browser. With no account required to use the app, clearing your browser data is the one
     thing that will lose your figures.</p>
-  <div class="row-actions" style="justify-content:flex-start">
+  <div class="datarow">
     <button type="button" id="exportBtn"><span aria-hidden="true">⬇︎</span> Download Backup (JSON)</button>
     <button type="button" id="importBtn"><span aria-hidden="true">⬆︎</span> Restore from Backup…</button>
     <input type="file" id="importFile" accept="application/json,.json" class="sr-only" aria-hidden="true" tabindex="-1">
   </div>
-  <hr class="dlg-sep">
-  <p class="hint">Every entry as a spreadsheet, for anyone who keeps figures in one. It is a
+  <hr>
+  <p>Every entry as a spreadsheet, for anyone who keeps figures in one. It is a
     one-way door: the CSV is for reading and charting elsewhere, and
     <strong>Restore reads the JSON above, never this</strong>.</p>
-  <div class="row-actions" style="justify-content:flex-start">
+  <div class="datarow">
     <button type="button" id="csvBtn"><span aria-hidden="true">⬇︎</span> Download Entries (CSV)</button>
   </div>
-  <hr class="dlg-sep">
-  <p class="hint">Restoring <strong>replaces everything in this browser</strong>. You are told
+  <hr>
+  <p>Restoring <strong>replaces everything in this browser</strong>. You are told
     what the file holds and asked to confirm first.</p>
   <details class="danger-zone">
     <summary>Start Again</summary>
-    <p class="hint" style="margin-top:var(--sp-5)">Deletes every entry. Your settings and your
+    <p>Deletes every entry. Your settings and your
       theme are kept.</p>
-    <div class="row-actions" style="justify-content:flex-start">
+    <div class="datarow">
       <button type="button" id="clearBtn" class="danger">Delete All Data</button>
     </div>
   </details>
-  <div class="row-actions">
+  <div class="datafoot">
     <button type="button" id="dataClose" class="primary">Close</button>
   </div>
 </dialog>
