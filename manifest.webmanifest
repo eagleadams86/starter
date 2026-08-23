@@ -1,0 +1,16 @@
+{
+  "id": "/starter/",
+  "name": "Starter",
+  "short_name": "Starter",
+  "description": "The shell every app in this family starts from: the shared palette, type and chrome, with the guards that keep saved data safe.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
