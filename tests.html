@@ -338,6 +338,30 @@ function define() {
     ok(/new ResizeObserver/.test(src),
        'and a drawing made at a size has to be remade when that size changes');
   });
+  t('pointing at a bar names it, in a panel built from the palette', () => {
+    const src = stripComments(APP_SRC);
+    const css = (src.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+    ok(/className = 'charttip'/.test(src), 'every sibling answers a hover with a panel');
+    /* The <title> it replaces was the browser's own tooltip: a second late, in
+       the OS's colours, and never shown on touch. Both would show at once. */
+    ok(!/<title>' \+ esc\(r\.name/.test(src), 'and the SVG <title> goes with it');
+    /* The same four values the siblings hand Chart.js. */
+    ok(/\.charttip\s*\{[^}]*background:\s*var\(--surface-alt\)/.test(css), 'surface-alt ground');
+    ok(/\.charttip\s*\{[^}]*var\(--border-strong\)/.test(css), 'border-strong edge');
+    ok(/\.charttip\s*\{[^}]*pointer-events:\s*none/.test(css),
+       'a panel that can be hovered flickers under the pointer that summoned it');
+    /* Delegated, because the chart is rebuilt on every render and every resize. */
+    ok(/wrap\.addEventListener\('pointermove'/.test(src), 'one listener on the wrap, not one per bar');
+    ok(/wrap\.addEventListener\('pointerdown'/.test(src), 'and a tap shows it on a touch screen');
+    /* A finger leaves the screen as the tap ends and the browser says so with
+       pointerleave — so on iOS the panel appeared and vanished inside the same
+       tap until this guard went in. */
+    ok(/pointerType !== 'touch'/.test(src),
+       'pointerleave must not take a TAP away the instant the finger lifts');
+    /* The name is the reader's own and arrives from share links too. */
+    ok(/n\.textContent = bar\.getAttribute\('data-name'\)/.test(src),
+       'the name is written with textContent, never innerHTML');
+  });
   t('the explanation control is an i, not a ?', () => {
     ok(/>i<\/button>/.test(APP_SRC),
        'Sprint Predictability, Flow Metrics and Money Map all render it as `i`');

@@ -423,6 +423,27 @@
      hands the height back to the overlay. */
   .chart-title { font-size: var(--fs-sm); color: var(--text-secondary);
                  margin: 2px 0 8px; }
+  /* THE HOVER TOOLTIP, and every value in it is the one the siblings hand
+     Chart.js: --surface-alt on a 1px --border-strong, 10px of padding, the name
+     in --text-primary and the detail under it in --text-secondary. Written as
+     CSS rather than passed to a library because this chart is an SVG — which is
+     also why it follows the palette and the print rules for free.
+
+     `pointer-events: none` is load-bearing: a panel that follows the pointer and
+     can be hovered will sit under the pointer, take the next pointermove for
+     itself, and flicker between shown and hidden for as long as you hold still. */
+  .charttip { position: absolute; z-index: 2; pointer-events: none;
+              max-width: 260px; padding: 10px; border-radius: var(--radius-sm);
+              background: var(--surface-alt); border: 1px solid var(--border-strong);
+              box-shadow: var(--shadow); font-size: var(--fs-xs);
+              color: var(--text-secondary); }
+  .charttip[hidden] { display: none; }
+  .charttip .n { display: block; color: var(--text-primary); font-weight: var(--fw-semibold);
+                 margin-bottom: 2px; }
+  /* The bar under the pointer, so the tooltip is never the only thing saying
+     which one is being read — the same reason the siblings' charts highlight. */
+  .bar.on { fill: color-mix(in srgb, var(--series-1) 55%, var(--surface)); }
+  .bar.neg.on { fill: color-mix(in srgb, var(--series-2) 55%, var(--surface)); }
   .chart-wrap { overflow-x: auto; position: relative; height: 300px; }
   /* Fills its box exactly, because renderChart draws the viewBox at the box's own
      measured size — so one unit is one pixel and nothing is scaled. */
@@ -993,7 +1014,8 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
         <span class="li"><span class="sw avg"></span> Average</span>
       </div>
       <p class="hint" style="margin-top:var(--sp-4)">Colour is never the only cue: every bar
-        names itself on hover and the figures are in the table on the Entries tab.</p>
+        names itself when you point at it — tap on a touch screen — and the figures are in
+        the table on the Entries tab.</p>
     </div>
   </div>
 
@@ -1601,10 +1623,22 @@ let lastChart = null;   /* the figures the chart was last drawn from */
 function renderChart(c) {
   lastChart = c;
   const wrap = document.getElementById('chartWrap');
+  /* innerHTML replaces everything in the wrap, the tooltip panel included, so it
+     is lifted out here and put back on every path out of this function.
+     Rebuilding it instead would leave the delegated listeners further down
+     pointing at a node no longer in the document. */
+  const tipEl = wrap.querySelector('.charttip');
+  const putTipBack = () => {
+    if (!tipEl) return;
+    tipEl.hidden = true;
+    wrap.appendChild(tipEl);
+    wrap.dispatchEvent(new Event('chartredraw'));
+  };
   document.getElementById('chartCount').textContent =
     c.count + (c.count === 1 ? ' entry' : ' entries');
   if (!c.count) {
     wrap.innerHTML = '<p class="empty">Nothing to chart yet.</p>';
+    putTipBack();
     return;
   }
   /* DRAWN AT THE BOX'S OWN SIZE, so one SVG unit is one CSS pixel. It used to be a
@@ -1645,12 +1679,22 @@ function renderChart(c) {
   const bars = c.rows.map((r, i) => {
     const cx = PAD_L + bw * i + bw / 2;
     const top = Math.min(y(r.value), zeroY), bot = Math.max(y(r.value), zeroY);
-    /* The <title> is what makes a bar readable without the colour — it is the
-       SVG equivalent of a tooltip and a screen reader reads it. */
+    /* WHAT THE BAR IS, carried on the rect for the tooltip below to read. It was
+       an SVG <title>, which is the browser's own tooltip: about a second late,
+       drawn in the OS's colours rather than the app's, and never shown at all on
+       a touch screen. Every sibling's chart answers a hover instantly in a panel
+       built from the palette, so this one does too — and the <title> goes, or
+       the native tip arrives a second after ours and the reader gets both.
+
+       Nothing is lost for a screen reader: the SVG carries a role="img" and an
+       aria-label describing the whole figure, which is what the siblings' canvas
+       charts do, and every value is in the table on the Entries tab. */
     return '<rect class="bar' + (r.value < 0 ? ' neg' : '') + '" x="' + (cx - barW / 2).toFixed(1)
       + '" y="' + top.toFixed(1) + '" width="' + barW.toFixed(1)
-      + '" height="' + Math.max(1, bot - top).toFixed(1) + '" rx="2">'
-      + '<title>' + esc(r.name + ': ' + fmt(r.value) + ' on ' + fmtDate(r.date)) + '</title></rect>';
+      + '" height="' + Math.max(1, bot - top).toFixed(1) + '" rx="2"'
+      + ' data-name="' + esc(r.name) + '"'
+      + ' data-value="' + esc(fmt(r.value)) + '"'
+      + ' data-date="' + esc(fmtDate(r.date)) + '"></rect>';
   }).join('');
 
   const avg = (state.settings.showAvg && c.average != null)
@@ -1671,6 +1715,7 @@ function renderChart(c) {
     + '">' + grid
     + '<line class="axisline" x1="' + PAD_L + '" x2="' + (W - PAD_R) + '" y1="' + zeroY.toFixed(1)
     + '" y2="' + zeroY.toFixed(1) + '"/>' + bars + avg + labels + '</svg>';
+  putTipBack();
 }
 
 /* ── Sorting ────────────────────────────────────────────────────────────────
@@ -2561,6 +2606,89 @@ document.addEventListener('keydown', (e) => {
    to a list like this would have read it inside its temporal dead zone. */
 ['entryDialog', 'settingsDialog', 'dataDialog', 'clearDialog', 'shareDialog', 'helpDialog',
  'searchDialog'].forEach((id) => closeOnBackdropClick($(id)));
+
+/* ── The hover tooltip ───────────────────────────────────────────────────────
+   Every sibling's chart answers a hover with a panel naming what is under the
+   pointer; this one had only an SVG <title>, which is the browser's own tooltip
+   — about a second late, in the OS's colours, and never shown on a touch screen
+   at all. What follows is the siblings' behaviour for an SVG.
+
+   ONE listener on the wrap, not one per bar: the chart is rebuilt on every
+   render and on every resize, so per-bar listeners would have to be re-attached
+   each time and one missed rebuild would leave a dead chart. Delegation survives
+   any number of redraws.
+
+   `pointerover`/`pointerout` rather than mouseenter, so a pen and a finger are
+   the same event. On touch the first tap shows the panel and the next tap
+   anywhere takes it away, which is how a tooltip on a touch screen has to work
+   if it is to work at all. */
+(() => {
+  const wrap = $('chartWrap');
+  const tip = document.createElement('div');
+  tip.className = 'charttip';
+  tip.hidden = true;
+  wrap.appendChild(tip);
+  let onBar = null;
+
+  const hide = () => {
+    if (onBar) { onBar.classList.remove('on'); onBar = null; }
+    tip.hidden = true;
+  };
+
+  const show = (bar, ev) => {
+    if (bar !== onBar) {
+      if (onBar) onBar.classList.remove('on');
+      onBar = bar;
+      bar.classList.add('on');
+      /* textContent on both halves, never innerHTML: the name is the reader's
+         own and arrives from a share link as readily as from the form. */
+      tip.textContent = '';
+      const n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = bar.getAttribute('data-name');
+      tip.appendChild(n);
+      tip.appendChild(document.createTextNode(
+        bar.getAttribute('data-value') + ' on ' + bar.getAttribute('data-date')));
+    }
+    tip.hidden = false;
+    /* Placed against the WRAP, which is the positioned ancestor, and clamped
+       inside it: a panel that runs off the right edge of the card is a panel
+       that makes the page scroll sideways. 14px clear of the pointer so it is
+       never under the finger that summoned it. */
+    const box = wrap.getBoundingClientRect();
+    const x = ev.clientX - box.left + wrap.scrollLeft;
+    const y = ev.clientY - box.top;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.max(0, Math.min(x + 14, wrap.scrollLeft + box.width - w - 2)) + 'px';
+    tip.style.top = Math.max(0, Math.min(y - h - 14, box.height - h - 2)) + 'px';
+  };
+
+  const barAt = (ev) => {
+    const t = ev.target;
+    return (t && t.classList && t.classList.contains('bar')) ? t : null;
+  };
+
+  wrap.addEventListener('pointermove', (ev) => {
+    const bar = barAt(ev);
+    if (bar) show(bar, ev); else hide();
+  });
+  wrap.addEventListener('pointerdown', (ev) => {
+    const bar = barAt(ev);
+    if (bar) show(bar, ev); else hide();
+  });
+  /* NOT FOR TOUCH. A finger leaves the screen the moment the tap ends, and the
+     browser fires pointerleave to say the pointer no longer exists — so on iOS
+     the panel appeared and vanished inside the same tap, which reads as the tap
+     having done nothing. A tap has to leave it up until something else takes it
+     down: the next tap (handled above, which hides when it lands off a bar),
+     Escape, or a redraw. Found on a real iPhone; a desktop pointer never does
+     this. */
+  wrap.addEventListener('pointerleave', (ev) => { if (ev.pointerType !== 'touch') hide(); });
+  /* A redraw throws away the rect the panel was describing. */
+  wrap.addEventListener('chartredraw', hide);
+  /* Escape closes it, like everything else here that covers something. */
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+})();
 
 /* ── One chart, filling the window ───────────────────────────────────────────
    Flow Metrics' feature, ported here because a new app is copied from this file.
