@@ -757,6 +757,14 @@
      The two panels sit in a grid so they are read as a pair of choices rather
      than as a queue, and they stack under 900px, where two columns of labelled
      fields stop fitting. */
+  /* The share window's prose, pinned the way the Back Up window's is. Flow
+     Metrics' intro sat FLUSH on the panels below it — that app's reset zeroes a
+     `p` margin and its intro carries no class, so nothing was giving it one —
+     while the same paragraph in Sprint Predictability had the browser's own 1em.
+     Reported 2026-08-23. Size and colour ride along so a paragraph added later
+     cannot land at the wrong one; every paragraph with an inline margin of its
+     own still wins, which is how the panels' hints keep their spacing. */
+  #shareDialog p { font-size: var(--fs-xs); color: var(--text-secondary); margin: 0 0 12px; }
   #shareDialog { max-width: 1100px; }
   #shareDialog .share-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
   @media (max-width: 900px) {
