@@ -613,7 +613,14 @@ function define() {
     ok(/confirm\('Delete “' \+ it\.name/.test(src),
        'a bare "Are you sure?" is a dialog people learn to click through');
     ok(/cannot be undone/.test(src), 'and it says what is lost');
-    ok(/confirm\('Delete every entry\?/.test(src), 'Delete All confirms too');
+    /* Delete-all is confirmed in a DIALOG, not a confirm(): it is the family's
+       shared window — PAPTrack's, to the pixel — and a confirm() cannot hold the
+       "Download Backup First" button that makes the answer safe to give. */
+    ok(/<dialog id="clearDialog"/.test(src), 'Delete All confirms in its own dialog');
+    ok(/id="clearBackupBtn"[^>]*class="safety"/.test(src),
+       'and offers the backup that is the only way back');
+    ok(/There is no undo — a downloaded backup is the only way/.test(src),
+       'and says so in the family\'s words');
     ok(/Restore ' \+ incoming\.entries\.length/.test(src),
        'and a restore says what the file holds before replacing anything');
   });

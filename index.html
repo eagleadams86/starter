@@ -602,6 +602,19 @@
   details.danger-zone > summary { cursor: pointer; font-size: var(--fs-xs);
                                   font-weight: var(--fw-semibold); color: var(--text-secondary); }
   details.danger-zone > summary:hover { color: var(--text-primary); }
+  /* ── The delete-all confirmation ───────────────────────────────────────────
+     The ONE window that is identical in every app in the family, so it is
+     PAPTrack's verbatim: 18px padding on the shared 560px, and a footer that
+     pushes the safety net to the far left, keeps the two answers together on
+     the right and, on a phone, gives the backup button a row of its own rather
+     than wrapping its own label in half beside them. A new app inherits it from
+     here — that is the point of the starter. */
+  #clearDialog { padding: 18px; }
+  .clearfoot { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 14px; }
+  .clearfoot .safety { margin-right: auto; }
+  @media (max-width: 460px) {
+    .clearfoot .safety { flex: 1 0 100%; margin-right: 0; }
+  }
 
   #shareLink { width: 100%; font-family: var(--font-mono); font-size: var(--fs-xs);
                color: var(--text-secondary); }
@@ -1018,6 +1031,21 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
   </details>
   <div class="row-actions">
     <button type="button" id="dataClose" class="primary">Close</button>
+  </div>
+</dialog>
+
+<!-- ── Confirming a delete-all ───────────────────────────────────────────────
+     Its own dialog rather than a confirm(): this is the one action with no way
+     back, so it gets room to say exactly how much is going and to offer the
+     backup that is the only route back — which a confirm() cannot hold a button
+     for. The same window, to the pixel, in every app in the family. -->
+<dialog id="clearDialog" aria-labelledby="clearTitle">
+  <h2 id="clearTitle">Delete All Data?</h2>
+  <p id="clearBody"></p>
+  <div class="clearfoot">
+    <button type="button" id="clearBackupBtn" class="safety"><span aria-hidden="true">⬇︎</span> Download Backup First</button>
+    <button type="button" id="clearCancel">Cancel</button>
+    <button type="button" id="clearConfirm" class="danger">Delete Everything</button>
   </div>
 </dialog>
 
@@ -2197,7 +2225,9 @@ $('settingsClose').addEventListener('click', () => $('settingsDialog').close());
 $('dataBtn').addEventListener('click', () => openModal($('dataDialog')));
 $('dataClose').addEventListener('click', () => $('dataDialog').close());
 
-$('exportBtn').addEventListener('click', () => {
+/* Named, not an inline handler: the delete-all dialog offers the very same
+   download as its safety net, and the two must never drift apart. */
+function downloadBackup() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2205,7 +2235,8 @@ $('exportBtn').addEventListener('click', () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast('Backup downloaded');
-});
+}
+$('exportBtn').addEventListener('click', downloadBackup);
 
 /* EVERY entry, regardless of what is on screen — which is what makes this a
    different thing from the table's own ⬇ CSV, and why both exist. A backup is
@@ -2263,9 +2294,23 @@ $('importFile').addEventListener('change', () => {
   reader.readAsText(file);
 });
 
+const clearDialog = $('clearDialog');
+
 $('clearBtn').addEventListener('click', () => {
-  if (!confirm('Delete every entry?\n\nYour settings and theme are kept. Take a backup first '
-             + 'if you might want the figures.')) return;
+  /* Closed first rather than stacked: a confirmation is the whole screen's
+     business, and backing out of it should not drop you into the dialog you
+     started from as though nothing had been asked. */
+  $('dataDialog').close();
+  const n = state.entries.length;
+  $('clearBody').textContent =
+    `This deletes ${n} entr${n === 1 ? 'y' : 'ies'}. Your settings and your theme are kept. `
+    + `There is no undo — a downloaded backup is the only way to get any of it back.`;
+  openModal(clearDialog);
+});
+
+$('clearBackupBtn').addEventListener('click', downloadBackup);
+$('clearCancel').addEventListener('click', () => clearDialog.close());
+$('clearConfirm').addEventListener('click', () => {
   /* Settings deliberately SURVIVE a clear: someone clearing the example data is
      starting fresh with real figures, not asking to lose the way they set the
      app up. */
@@ -2274,7 +2319,7 @@ $('clearBtn').addEventListener('click', () => {
   state.settings = keep;
   save();
   render();
-  $('dataDialog').close();
+  clearDialog.close();
   toast('Everything deleted');
 });
 
@@ -2341,8 +2386,8 @@ document.addEventListener('keydown', (e) => {
    is declared further down registers beside its own wiring instead — the share
    dialog in two apps shipped un-dismissable for exactly that reason: adding it
    to a list like this would have read it inside its temporal dead zone. */
-['entryDialog', 'settingsDialog', 'dataDialog', 'shareDialog', 'helpDialog', 'searchDialog']
-  .forEach((id) => closeOnBackdropClick($(id)));
+['entryDialog', 'settingsDialog', 'dataDialog', 'clearDialog', 'shareDialog', 'helpDialog',
+ 'searchDialog'].forEach((id) => closeOnBackdropClick($(id)));
 
 /* ═══════════════════════════════ Boot ═════════════════════════════════════ */
 
