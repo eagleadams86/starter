@@ -363,16 +363,117 @@
   /* ── Summary tiles ──────────────────────────────────────────────────────────
      `subgrid` is what keeps the label and the number lined up ACROSS a row when
      one label wraps and its neighbours don't — the same reason SV and Flow
-     Metrics use it. The column counts are spelled out rather than left to
-     auto-fit, which stranded a fifth tile alone on a row with three empty slots
-     beside it: six tracks with each tile spanning two puts three across, and
-     tiles 4 and 5 span three apiece to finish the second row. THERE ARE EXACTLY
-     FIVE TILES AND THOSE SPANS ASSUME IT — add or remove one and the spans and
-     the phone rule below have to be redone in the same commit. The ORDER is
-     layout, not editorial: under 620px the fifth tile takes the full width, so
-     the value that is not a short number belongs there. */
-  .stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
-           grid-template-rows: repeat(2, auto); gap: var(--sp-5); }
+     Metrics use it.
+
+     A TILE ROW FILLS ONE LINE WHEN THE LINE HAS ROOM FOR EVERY TILE, AND SPLITS
+     INTO EQUAL ROWS WHEN IT DOES NOT — never a full row with a lone tile
+     stranded under it. That is the family rule (2026-08-23; Money Map hit it
+     first with six net-worth tiles coming out five across and one alone
+     underneath), and it lives here because THIS FILE IS WHAT A NEW APP STARTS
+     FROM and the tile row is the first thing a new app changes. It replaced a
+     hand-counted six-track grid whose spans assumed exactly five tiles — right
+     for the five here, and wrong the moment anybody edited the `tiles` array in
+     renderStats, which is the one edit this file is FOR.
+
+     The COUNT comes from `:has(> :nth-child(N):last-child)`, which is "exactly N
+     children", so nothing has to be re-derived when a tile is added or dropped.
+     The WIDTH comes from a CONTAINER query, so a row answers the box it is
+     actually in — a card in a two-up layout is nowhere near the viewport's
+     width, and a media query would answer the wrong question for it.
+
+     The thresholds are the 160px minimum tile and the 12px gap multiplied out:
+     2→332, 3→504, 4→676, 5→848, 6→1020, 7→1192, 8→1364. Narrowest first, so the
+     widest rule that matches wins. Only counts that leave rows differing by at
+     most one tile are offered, and never a row holding a single tile: five go 5,
+     3 + 2, or one per line, never 2 + 2 + 1; seven go 7 or 4 + 3.
+     A SHORT LAST ROW IS STRETCHED TO FINISH THE LINE rather than left with a
+     hole at the end of it: lcm(columns, last row) tracks, the full rows' tiles
+     spanning lcm/columns and the last row's lcm/last row. Three-then-two is six
+     tracks at span 2 and span 3 — Golf Handicap's hand-counted grid, which had
+     to be redone by hand for any count but five, generalised to every count.
+     The stretch is undone at the width where the tiles all fit on one line, and
+     undone on BOTH selectors: `:nth-child` out-ranks a bare `> *` and would
+     otherwise carry its span into the wider layout. Nine or more
+     keeps the auto-fit line — a strip that long is a scroll at every width.
+     tests.html reads the 160 and the 12 back out of this file and checks every
+     threshold against them, so raising the minimum tile fails the suite instead
+     of quietly making a row too tight. Sprint Predictability and Flow Metrics
+     carry the same block against their own tile rows; Money Map's is the same
+     table at a 230px floor. A change to it belongs in all of them. */
+  .stats { display: grid; gap: var(--sp-5);
+           grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+           grid-template-rows: repeat(2, auto); }
+  @container tiles (min-width: 332px) {
+    .stats:has(> :nth-child(2):last-child),
+    .stats:has(> :nth-child(4):last-child),
+    .stats:has(> :nth-child(6):last-child),
+    .stats:has(> :nth-child(8):last-child) {
+      grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(3):last-child),
+    .stats:has(> :nth-child(5):last-child),
+    .stats:has(> :nth-child(7):last-child) {
+      grid-template-columns: minmax(0, 1fr); }
+  }
+  @container tiles (min-width: 504px) {
+    .stats:has(> :nth-child(3):last-child),
+    .stats:has(> :nth-child(6):last-child) {
+      grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(5):last-child) {
+      grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(5):last-child) > * {
+      grid-column: span 2; }
+    .stats:has(> :nth-child(5):last-child) > :nth-child(n+4) {
+      grid-column: span 3; }
+    .stats:has(> :nth-child(8):last-child) {
+      grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(8):last-child) > * {
+      grid-column: span 2; }
+    .stats:has(> :nth-child(8):last-child) > :nth-child(n+7) {
+      grid-column: span 3; }
+  }
+  @container tiles (min-width: 676px) {
+    .stats:has(> :nth-child(4):last-child) {
+      grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(7):last-child) {
+      grid-template-columns: repeat(12, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(7):last-child) > * {
+      grid-column: span 3; }
+    .stats:has(> :nth-child(7):last-child) > :nth-child(n+5) {
+      grid-column: span 4; }
+    .stats:has(> :nth-child(8):last-child) {
+      grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(8):last-child) > *,
+    .stats:has(> :nth-child(8):last-child) > :nth-child(n+7) {
+      grid-column: auto; }
+  }
+  @container tiles (min-width: 848px) {
+    .stats:has(> :nth-child(5):last-child) {
+      grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(5):last-child) > *,
+    .stats:has(> :nth-child(5):last-child) > :nth-child(n+4) {
+      grid-column: auto; }
+  }
+  @container tiles (min-width: 1020px) {
+    .stats:has(> :nth-child(6):last-child) {
+      grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  }
+  @container tiles (min-width: 1192px) {
+    .stats:has(> :nth-child(7):last-child) {
+      grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .stats:has(> :nth-child(7):last-child) > *,
+    .stats:has(> :nth-child(7):last-child) > :nth-child(n+5) {
+      grid-column: auto; }
+  }
+  @container tiles (min-width: 1364px) {
+    .stats:has(> :nth-child(8):last-child) {
+      grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  }
+  /* Whatever holds a tile row becomes the thing those queries measure — the
+     row's own parent, so the width asked about is the width the tiles actually
+     get, with no card padding counted in. NAMED, so a container added elsewhere
+     later cannot start answering these queries by accident; where none is found
+     the row keeps the auto-fit line above. */
+  :has(> .stats) { container: tiles / inline-size; }
   /* THE 6px LEFT EDGE is the family's tile, taken from Sprint Predictability —
      the design lead for this chrome — and shared with Flow Metrics. It is what
      makes a row of figures read as a row of tiles rather than as boxes, and it
@@ -383,17 +484,11 @@
      edge and says why in its own file — the two sets of boxes down that page
      read as one. This is the shell every new app starts from, so it carries the
      lead's version. */
-  .stat { display: grid; grid-row: span 2; grid-column: span 2; grid-template-rows: subgrid;
+  .stat { display: grid; grid-row: span 2; grid-template-rows: subgrid;
           align-content: start; background: var(--surface-alt);
           border: 1px solid var(--border); border-left-width: 6px;
           border-radius: var(--radius-sm); padding: 12px 14px; }
-  .stat:nth-child(4), .stat:nth-child(5) { grid-column: span 3; }
   .stat .v { font-size: var(--fs-xl); font-weight: var(--fw-semibold); }
-  @media (max-width: 620px) {
-    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .stat, .stat:nth-child(4) { grid-column: span 1; }
-    .stat:nth-child(5) { grid-column: span 2; }
-  }
 
   /* ── The chart ──────────────────────────────────────────────────────────────
      SVG rather than a canvas, deliberately, and it is worth knowing why: an SVG

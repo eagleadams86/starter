@@ -1169,17 +1169,85 @@ function define() {
        'clearing the example data is starting fresh, not asking to lose your setup');
     eq(Object.keys(H.defaultSettings()).sort(), ['decimals', 'showAvg', 'zeroBase']);
   });
-  t('the summary tiles are exactly five, because the grid spans assume it', () => {
+  /* ── The tile row ───────────────────────────────────────────────────────────
+     A tile row fills ONE line when the line has room for every tile, and splits
+     into EQUAL rows when it does not — the family rule, and the one piece of
+     this file that exists because the file is a TEMPLATE: the tile row is the
+     first thing a new app edits, and the hand-counted spans this replaced were
+     right for exactly five tiles and wrong for every other number.
+     The two figures the thresholds were worked out from are read back out —
+     the minimum tile from the CSS, the gap from the LIVE element, since it is
+     written as a pack token and only the browser knows what that resolves to. */
+  t('a tile row fills the line, or splits evenly — whatever the tile count', () => {
     const el = W.document.getElementById('stats');
     ok(el, 'the tiles must exist');
-    const css = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
-    ok(/\.stat:nth-child\(4\), \.stat:nth-child\(5\)\s*\{\s*grid-column:\s*span 3/.test(css),
-       'tiles 4 and 5 span three apiece to finish the second row');
-    ok(/grid-template-rows:\s*subgrid/.test(css),
+    ok(/grid-template-rows:\s*subgrid/.test(APP_SRC),
        'subgrid is what lines the labels up when one of them wraps');
-    const src = stripComments(APP_SRC);
-    const tiles = (src.match(/const tiles = \[([\s\S]*?)\];/) || [])[1] || '';
-    eq((tiles.match(/^\s*\[/gm) || []).length, 5, 'five tiles in renderStats');
+    ok(!/\.stat:nth-child\(\d\)/.test(APP_SRC),
+       'and no rule counts a tile by position any more — that is what assumed five of them');
+    /* Walks the container queries in the order the cascade does, keeping each
+       tile count's state as it goes, and checks the promise at every width:
+       the columns fit at the tile floor, no row holds a single tile, and a
+       short last row is STRETCHED to finish the line rather than leaving a
+       hole. The floor and the gap are read back out of the app, so raising
+       either fails here instead of quietly making a row too tight. */
+    {
+      const CSS = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+      const fl = CSS.match(/\.stats \{[^}]*minmax\((\d+)px/);
+      ok(fl, 'the auto-fit fallback still states a smallest tile');
+      const MIN = fl ? +fl[1] : 0;
+      /* The gap is a pack token, so only the browser knows what it is. */
+      const GAP = parseFloat(W.getComputedStyle(el).columnGap);
+      ok(GAP > 0, 'and the gap resolves to a real number — ' + GAP + 'px');
+      const blocks = [...CSS.matchAll(/@container tiles \(min-width: (\d+)px\) \{([\s\S]*?)\n  \}/g)];
+      ok(blocks.length >= 5, 'the container queries are there — ' + blocks.length + ' of them');
+      const st = {};
+      let checked = 0;
+      for (const [, atStr, body] of blocks) {
+        const at = +atStr;
+        for (const chunk of body.split('}')) {
+          if (chunk.indexOf('grid-') < 0) continue;
+          const targets = [...chunk.matchAll(/:nth-child\((\d+)\):last-child\)(\s*>\s*(?:\*|:nth-child\(n\+(\d+)\)))?/g)];
+          ok(targets.length > 0, 'every rule says which tile counts it answers');
+          const tracksM = chunk.match(/grid-template-columns: (?:repeat\((\d+),|minmax)/);
+          const colM = chunk.match(/grid-column: (?:span (\d+)|(auto))/);
+          for (const t of targets) {
+            const n = +t[1], k = t[3] ? +t[3] : null;
+            const s = st[n] || (st[n] = { tracks: 1, full: 1, last: null, first: null });
+            if (tracksM) s.tracks = tracksM[1] ? +tracksM[1] : 1;
+            else if (colM && k) { s.last = colM[2] ? null : +colM[1]; s.first = colM[2] ? null : k; }
+            else if (colM && t[2]) s.full = colM[2] ? 1 : +colM[1];
+          }
+        }
+        for (const key of Object.keys(st)) {
+          const n = +key, s = st[n], c = s.tracks / s.full;
+          ok(Number.isInteger(c) && c >= 1,
+             n + ' tiles: ' + s.tracks + ' tracks do not divide by a span of ' + s.full);
+          ok(c * MIN + (c - 1) * GAP <= at,
+             c + ' columns need ' + (c * MIN + (c - 1) * GAP) + 'px of tiles and gaps, and the '
+             + 'query lets them in at ' + at + 'px');
+          ok(n >= c, n + ' tiles can never fill ' + c + ' columns');
+          ok(c === 1 || n % c !== 1,
+             n + ' tiles across ' + c + ' columns leaves one tile alone on the last row');
+          const rows = Math.ceil(n / c), lastRow = n - c * (rows - 1);
+          if (lastRow === c) {
+            ok(!s.last, n + ' tiles fill every row at ' + c + ' across, so nothing may be stretched');
+          } else {
+            ok(s.last && lastRow * s.last === s.tracks,
+               n + ' tiles at ' + c + ' across leave ' + lastRow + ' on the last row, which must be '
+               + 'stretched to finish the line rather than leaving a hole');
+            ok(s.first === c * (rows - 1) + 1,
+               'and the stretch starts at the first tile of that row');
+          }
+          checked++;
+        }
+      }
+      ok(Object.keys(st).length >= 7, 'every tile count from two to eight is answered');
+      ok(checked >= 40, 'and each one is checked at every width above the one it changes at');
+      ok(/:has\(> \.stats\) \{ container: tiles \/ inline-size; \}/.test(CSS),
+         "the row's own parent is the named container — without it every query above "
+         + 'matches nothing and the counts silently stop applying');
+    }
   });
 
   /* ── The info dot and the help window ──────────────────────────────────────

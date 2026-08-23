@@ -56,7 +56,7 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 |---|---|
 | **Welcome card** | The three choices Money Map opens on, decided before first paint so nothing flashes |
 | **Two tabs** | `data-tab` on `<html>` set in `<head>`; CSS switches, a real tablist with arrow keys, both panels print |
-| **Summary tiles** | Five, on `subgrid` so labels line up across a row; the spans assume five |
+| **Summary tiles** | On `subgrid` so labels line up across a row, and laid out by COUNT: the row fills one line when it fits, splits into equal rows when it doesn't, and stretches a short last row to finish the line. Change the `tiles` array to any number from two to eight and the CSS follows — nothing to re-derive |
 | **A chart** | SVG, so it follows a theme change *and* the print palette for free. Tint fill + full-strength edge (pack rule 3), `--series-*` only (rule 4). Drawn at the box's own pixel size and redrawn when it changes, so nothing is ever scaled |
 | **A chart card** | The siblings' anatomy: name, an info dot, a sentence saying what is plotted, a 300px box, and a button that lifts the chart out to fill the window (Escape, the button again, or a click outside) |
 | **The info dot and the help window** | Two family-wide blocks, declared property by property and identical in all seven windows: a 16px outlined circled **i** (never a `?`) with a 24px tap target from an unpainted `::after`, and a window sized by its own text — `#helpBody` capped at 66 characters, `#helpDialog` at `width: fit-content` — which comes out at **666px with 624px of text** everywhere. One window for the whole app, filled from a `HELP` table by `data-help` key, dismissed with **Got It**. Copy the blocks; do not re-derive them |
