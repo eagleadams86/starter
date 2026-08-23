@@ -743,8 +743,6 @@
     .clearfoot .safety { flex: 1 0 100%; margin-right: 0; }
   }
 
-  #shareLink { width: 100%; font-family: var(--font-mono); font-size: var(--fs-xs);
-               color: var(--text-secondary); }
 
   /* ── Find ───────────────────────────────────────────────────────────────────
      A result is a BUTTON, not a row with a click handler — it has to be
@@ -752,6 +750,25 @@
      each: where it is, a snippet that tells two near-identical hits apart, and
      the tab it will take you to. The list scrolls inside the dialog rather than
      making the dialog itself taller than the screen. */
+  /* ── The family's share window ─────────────────────────────────────────────
+     1100px, which is what Sprint Predictability, Flow Metrics, Golf Handicap and
+     Money Map all open Share at — it is the widest window in the family because
+     it is the only one that asks two questions side by side before it answers.
+     The two panels sit in a grid so they are read as a pair of choices rather
+     than as a queue, and they stack under 900px, where two columns of labelled
+     fields stop fitting. */
+  #shareDialog { max-width: 1100px; }
+  #shareDialog .share-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  @media (max-width: 900px) {
+    #shareDialog .share-choices { grid-template-columns: 1fr; }
+  }
+  /* A panel nested in `.share-choices` is not a sibling of the panel after it, so
+     the gap between the pair and "Your Link" has to name the wrapper too. */
+  .formpanel + .formpanel, .share-choices + .formpanel { margin-top: 20px; }
+  #shareDialog .share-choices > .formpanel { margin-top: 0; }
+  #shareLink { width: 100%; font-family: var(--font-mono); font-size: var(--fs-xs);
+               color: var(--text-secondary); }
+  #shareMeta:empty, #shareScope:empty { display: none; }
   #searchDialog { max-width: 420px; }
   #searchBox { margin-top: 4px; }
   .searchresults { max-height: 50vh; overflow-y: auto; margin-top: 10px; }
@@ -1217,20 +1234,76 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
   </div>
 </dialog>
 
-<dialog id="shareDialog" aria-labelledby="shareTitle">
-  <h2 id="shareTitle">Share These Figures</h2>
-  <p>The numbers travel <strong>inside the link itself</strong> — nothing is uploaded and no
-    copy is kept, so there is also no way to withdraw one once it is sent. Whoever opens it
-    sees a read-only snapshot, and their own figures are left untouched.</p>
+<!-- ── The family's share window ─────────────────────────────────────────────
+     The same shape in all six apps: the title, the sentence about where the data
+     goes, a `.share-choices` pair of panels deciding WHAT rides in the link, the
+     "Your Link" panel with the box and its two buttons, the snapshot warning, and
+     a Done that is the only thing in the footer. What differs between apps is
+     only what there is to choose — teams, golfers, tabs, entries.
+
+     The two panels here are the two a scope picker is made of, and a new app can
+     copy either: a HOW MUCH (a window over the data) and a WHAT (a redaction). -->
+<dialog id="shareDialog" aria-labelledby="shareDialogTitle">
+  <h2 id="shareDialogTitle">Share a Read-Only Link</h2>
+  <p>Anyone opening this link sees the entries you pick, with no way to change them and no
+    sign-in. The figures travel <em>inside</em> the link itself — nothing is uploaded
+    anywhere, and it doesn't touch whatever they have saved in their own browser.</p>
+
+  <div class="share-choices">
+  <fieldset class="formpanel">
+    <legend>How Many Entries</legend>
+    <div class="field" style="margin-bottom:var(--sp-4)">
+      <label for="shareKeep">Include</label>
+      <select id="shareKeep">
+        <option value="all" selected>Every entry</option>
+        <option value="n:20">The last 20</option>
+        <option value="n:10">The last 10</option>
+        <option value="m:12">The last 12 months</option>
+        <option value="m:6">The last 6 months</option>
+        <option value="custom">Entries from a date I choose</option>
+      </select>
+    </div>
+    <div class="field" id="shareDateWrap" hidden style="margin-bottom:0">
+      <label for="shareDate">Include entries dated on or after</label>
+      <input type="date" id="shareDate">
+    </div>
+    <p class="hint" style="margin:var(--sp-5) 0 0">Nothing is deleted — this only decides how
+      much rides in the link, which is what keeps a long one sendable.
+      <strong>A trimmed link shows trimmed figures:</strong> the total, the average and the
+      chart are all worked out from the entries inside it, so they can differ from the ones on
+      your screen. Whoever opens it is told which window they are looking at.</p>
+  </fieldset>
+
+  <fieldset class="formpanel">
+    <legend>What to Include</legend>
+    <label class="checkline"><input type="checkbox" id="shareNames" checked>
+      <span>Real names — otherwise every entry reads as <strong>Entry 1</strong>,
+        <strong>Entry 2</strong> and so on</span></label>
+    <p class="hint" style="margin:var(--sp-5) 0 0">Values and dates ride either way: they are
+      the figures the link exists to show. It is the NAMES that say what a figure is about,
+      which is why they are the thing you can leave behind.</p>
+  </fieldset>
+  </div>
+
   <fieldset class="formpanel">
     <legend>Your Link</legend>
-    <input type="text" id="shareLink" readonly aria-label="The share link">
-    <p class="hint" id="shareMeta" style="margin-top:var(--sp-4)"></p>
+    <input type="text" id="shareLink" readonly aria-label="Read-only share link">
+    <p class="hint" id="shareMeta" role="status" style="margin:var(--sp-4) 0 0"></p>
+    <p class="hint" id="shareScope" role="status" style="margin:6px 0 0"></p>
+    <p class="warn" id="shareWarn" role="status"></p>
+    <div class="row" style="margin-top:10px">
+      <button type="button" class="primary" id="shareCopyBtn">Copy Link</button>
+      <button type="button" id="shareOpenBtn">Preview It</button>
+    </div>
   </fieldset>
-  <div class="row-actions">
-    <button type="button" id="shareCopy">Copy Link</button>
-    <button type="button" id="sharePreview">Preview It</button>
-    <button type="button" class="primary" id="shareDone">Done</button>
+
+  <p class="hint" style="margin-top:14px">This is a <strong>snapshot</strong>, frozen as it
+    looks right now — later edits won't appear, so send a fresh link when the figures move.
+    There is no way to withdraw one once sent, and whoever holds it can read everything inside
+    it, so treat it like emailing a spreadsheet.</p>
+
+  <div class="row" style="justify-content:flex-end;margin-top:18px">
+    <button type="button" class="primary" id="shareCloseBtn">Done</button>
   </div>
 </dialog>
 
@@ -1584,6 +1657,10 @@ function renderViewbar() {
     + '<span>Nothing here is saved to this browser, and your own figures are untouched.</span>'
     + (shareMeta && shareMeta.sharedAt
         ? '<span class="muted">Shared ' + esc(fmtDate(shareMeta.sharedAt)) + '</span>' : '')
+    /* A TRIMMED link says so, or its totals read as the whole story. Every
+       sibling tells the reader which window they were given. */
+    + (shareMeta && shareMeta.from
+        ? '<span class="muted">Covers ' + esc(fmtDate(shareMeta.from)) + ' onwards</span>' : '')
     + '<button type="button" class="link" id="leaveShare">Back to mine</button>';
   document.getElementById('leaveShare').addEventListener('click', () => {
     location.hash = '';
@@ -2227,14 +2304,69 @@ async function squeeze(bytes, Stream, format) {
    so a test can pin exactly what a link carries and what it must not. Nothing
    identifying, ever. The settings ride along because the figures are meaningless
    read under someone else's rounding. */
-function buildSharePayload(st) {
-  return {
+/* WHICH ENTRIES A LINK CARRIES, worked out from the picker rather than inside
+   the builder — a pure function of (entries, choice, date) so a test can pin
+   every window without going near the DOM. `n:` counts back from the newest
+   ENTRY, `m:` counts months back from the newest entry's date rather than from
+   today: a link built from data that stops in March should not come out empty
+   because it is now September. Anything it does not recognise means everything,
+   which is the safe direction — a link with too much in it is long, a link with
+   too little in it is wrong. */
+function shareWindow(entries, keep, fromDate) {
+  const rows = entries.slice().sort((a, b) => a.date.localeCompare(b.date));
+  if (!rows.length) return { rows: [], from: null };
+  const newest = rows[rows.length - 1].date;
+  if (keep === 'custom') {
+    if (!fromDate) return null;                    /* asked for, not yet answered */
+    return { rows: rows.filter((e) => e.date >= fromDate), from: fromDate };
+  }
+  const n = /^n:(\d+)$/.exec(keep);
+  if (n) {
+    const take = rows.slice(-Number(n[1]));
+    return { rows: take, from: take.length && take.length < rows.length ? take[0].date : null };
+  }
+  const m = /^m:(\d+)$/.exec(keep);
+  if (m) {
+    const parts = newest.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1 - Number(m[1]), parts[2], 12);
+    const pad = (x) => String(x).padStart(2, '0');
+    const cut = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    return { rows: rows.filter((e) => e.date >= cut), from: cut };
+  }
+  return { rows, from: null };
+}
+
+/* A TRIMMED COPY, built by a PURE function that takes the state as an argument
+   so a test can pin exactly what a link carries and what it must not. Nothing
+   identifying, ever. The settings ride along because the figures are meaningless
+   read under someone else's rounding.
+
+   `from` is additive and OPTIONAL, so it needs no bump of SHARE_PAYLOAD_V: a
+   build that predates it simply doesn't draw the "starts from" line, where a
+   bump would make it refuse the whole link. Same reasoning as PAPTrack's
+   `schema` field. */
+function buildSharePayload(st, opts) {
+  const o = opts || {};
+  const win = shareWindow(st.entries, o.keep || 'all', o.from) || { rows: [], from: null };
+  const names = o.names !== false;
+  const out = {
     v: SHARE_PAYLOAD_V,
     sharedAt: todayISO(),
     settings: { decimals: st.settings.decimals, showAvg: st.settings.showAvg,
                 zeroBase: st.settings.zeroBase },
-    entries: st.entries.map((e) => ({ id: e.id, name: e.name, value: e.value, date: e.date })),
+    /* Redaction replaces the name rather than dropping the field: a row with no
+       name at all would render as a blank cell, and a reader cannot tell a
+       withheld name from a missing one. */
+    entries: win.rows.map((e, i) => ({ id: e.id, name: names ? e.name : 'Entry ' + (i + 1),
+                                       value: e.value, date: e.date })),
   };
+  /* ADDED ONLY WHEN THERE IS ONE, not set to undefined. JSON.stringify drops an
+     undefined value, so the link would be identical either way — but
+     `Object.keys` does NOT drop the key, and the suite's payload-shape guard
+     reads exactly that. A key that exists only sometimes should exist only
+     sometimes in the object too. */
+  if (win.from) out.from = win.from;
+  return out;
 }
 
 async function encodeShare(payload) {
@@ -2542,36 +2674,83 @@ $('clearConfirm').addEventListener('click', () => {
 });
 
 /* ── Share ────────────────────────────────────────────────────────────────── */
-$('shareBtn').addEventListener('click', async () => {
-  if (!state.entries.length) { toast('There is nothing to share yet.'); return; }
-  $('shareLink').value = 'Building the link…';
-  $('shareMeta').textContent = '';
-  openModal($('shareDialog'));
+/* THE LINK IS REBUILT ON EVERY CHANGE, not only when the window opens — a
+   picker that changes nothing you can see until you press something else is a
+   picker people distrust. Sequenced, because encodeShare is async: a fast change
+   while a slower build is still running would otherwise let the older answer land
+   last and describe a link nobody asked for. The two buttons are disabled while a
+   build is in flight, so a link can never be copied mid-rebuild. */
+let shareSeq = 0;
+
+async function refreshShareLink() {
+  const link = $('shareLink'), meta = $('shareMeta');
+  const scope = $('shareScope'), warn = $('shareWarn');
+  const busy = ++shareSeq;
+  const setBusy = (on) => { $('shareCopyBtn').disabled = on; $('shareOpenBtn').disabled = on; };
+  const stop = (msg) => { link.value = ''; meta.textContent = msg;
+                          scope.textContent = ''; warn.textContent = ''; setBusy(true); };
+
+  const keep = $('shareKeep').value;
+  const names = $('shareNames').checked;
+  const win = shareWindow(state.entries, keep, $('shareDate').value);
+  /* A half-typed custom date must not quietly build a whole-history link — that
+     is the one case where "no cutoff" would mean the opposite of what was asked. */
+  if (!win) return stop('Choose the date to include from.');
+  if (!win.rows.length) return stop('Nothing falls inside that window.');
+
+  setBusy(true);
+  link.value = 'Building the link…';
   try {
-    const token = await encodeShare(buildSharePayload(state));
+    const token = await encodeShare(
+      buildSharePayload(state, { keep, from: $('shareDate').value, names }));
+    if (busy !== shareSeq) return;                 /* a newer build has taken over */
     const url = location.origin + location.pathname + SHARE_PREFIX + token;
-    $('shareLink').value = url;
-    $('shareMeta').textContent = state.entries.length
-      + (state.entries.length === 1 ? ' entry' : ' entries') + ' · ' + url.length + ' characters'
-      + (url.length > SHARE_WARN_AT
-         ? ' — long enough that some chat apps and mail clients will cut it. Send it as a link '
-           + 'rather than pasting the text.' : '');
+    link.value = url;
+    setBusy(false);
+    const held = state.entries.length;
+    /* "12 of 40" rather than a bare count, because the number that matters when a
+       link is too long is how much was left behind. */
+    meta.textContent = (win.rows.length === held
+        ? win.rows.length + (win.rows.length === 1 ? ' entry' : ' entries')
+        : win.rows.length + ' of ' + held + ' entries')
+      + ' · ' + url.length.toLocaleString() + ' characters';
+    /* Built from parts and joined, so the line never ends in a stray space when
+       only one half of it has anything to say. */
+    scope.textContent = [
+      win.from ? 'From ' + fmtDate(win.from) + ' onwards.' : '',
+      names ? '' : 'Names are left behind — every entry reads as Entry 1, Entry 2 and so on.',
+    ].filter(Boolean).join(' ');
+    warn.textContent = url.length > SHARE_WARN_AT
+      ? 'Long enough that some chat apps and mail clients will cut it. Send it as a link '
+        + 'rather than pasting the text, or trim the window above.' : '';
   } catch (e) {
-    $('shareLink').value = '';
-    $('shareMeta').textContent = 'This browser could not build a link.';
+    if (busy !== shareSeq) return;
+    stop('This browser could not build a link.');
   }
+}
+
+$('shareBtn').addEventListener('click', () => {
+  if (!state.entries.length) { toast('There is nothing to share yet.'); return; }
+  openModal($('shareDialog'));
+  refreshShareLink();
 });
-$('shareCopy').addEventListener('click', async () => {
+/* One listener for the three controls: any of them changes what the link holds. */
+['shareKeep', 'shareNames', 'shareDate'].forEach((id) =>
+  $(id).addEventListener('change', () => {
+    $('shareDateWrap').hidden = $('shareKeep').value !== 'custom';
+    refreshShareLink();
+  }));
+$('shareCopyBtn').addEventListener('click', async () => {
   const v = $('shareLink').value;
   if (!v || v.indexOf('http') !== 0) return;
   try { await navigator.clipboard.writeText(v); toast('Link copied'); }
   catch (e) { $('shareLink').select(); toast('Press ⌘C to copy'); }
 });
-$('sharePreview').addEventListener('click', () => {
+$('shareOpenBtn').addEventListener('click', () => {
   const v = $('shareLink').value;
   if (v && v.indexOf('http') === 0) window.open(v, '_blank', 'noopener');
 });
-$('shareDone').addEventListener('click', () => $('shareDialog').close());
+$('shareCloseBtn').addEventListener('click', () => $('shareDialog').close());
 
 $('themeSel').addEventListener('change', (e) => setTheme(e.target.value));
 
@@ -2901,7 +3080,8 @@ async function boot() {
   if (shareToken) {
     try {
       const p = await decodeShare(shareToken);
-      shareMeta = { sharedAt: p.sharedAt };
+      /* `from` is optional and rides along only when the sender trimmed. */
+      shareMeta = { sharedAt: p.sharedAt, from: p.from };
       state = normalizeState({ version: SCHEMA, entries: p.entries, settings: p.settings });
     } catch (e) {
       /* A link that cannot be read falls back to this browser's OWN data rather
@@ -2955,6 +3135,9 @@ window.__starterTestHooks = {
   TAB_KEY: TAB_KEY, TABS: TABS, SHARE_FORMAT: SHARE_FORMAT, SHARE_PAYLOAD_V: SHARE_PAYLOAD_V,
   blankState: blankState, normalizeState: normalizeState, defaultSettings: defaultSettings,
   sampleData: sampleData, computeAll: computeAll, buildSharePayload: buildSharePayload,
+  /* Pure, and the only place a link's window is decided — pinned directly rather
+     than through the dialog, so a test can cover every option without a DOM. */
+  shareWindow: shareWindow,
   encodeShare: encodeShare, decodeShare: decodeShare, csvEntries: csvEntries, csvCell: csvCell,
   raisesKeyboard: raisesKeyboard, esc: esc, todayISO: todayISO, fmt: fmt,
   nextSort: nextSort, COLUMNS: COLUMNS, tableToRows: tableToRows, cellText: cellText,

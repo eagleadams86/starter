@@ -362,6 +362,56 @@ function define() {
     ok(/n\.textContent = bar\.getAttribute\('data-name'\)/.test(src),
        'the name is written with textContent, never innerHTML');
   });
+  /* ── The family's share window ─────────────────────────────────────────── */
+  t('the share window is the family shape', () => {
+    const src = APP_SRC;
+    ok(src.indexOf('id="shareDialogTitle">Share a Read-Only Link<') !== -1,
+       'every sibling calls it the same thing');
+    ok(src.indexOf('<div class="share-choices">') !== -1, 'two panels of choices, side by side');
+    ok(src.indexOf('id="shareCopyBtn"') !== -1 && src.indexOf('id="shareOpenBtn"') !== -1
+       && src.indexOf('id="shareCloseBtn"') !== -1, 'and the siblings three button ids');
+    ok(src.indexOf('aria-label="Read-only share link"') !== -1, 'the link box says what it is');
+    ok(src.indexOf('<strong>snapshot</strong>') !== -1, 'it closes on the snapshot warning');
+    const css = (stripComments(src).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+    ok(/#shareDialog\s*\{[^}]*max-width:\s*1100px/.test(css),
+       '1100px, which is what the other four open Share at');
+  });
+  t('a share link can be trimmed, and says so', () => {
+    const rows = [
+      { id: 'a', name: 'A', value: 1, date: '2026-01-10' },
+      { id: 'b', name: 'B', value: 2, date: '2026-04-10' },
+      { id: 'c', name: 'C', value: 3, date: '2026-07-10' }
+    ];
+    const ids = (w) => w.rows.map(function (r) { return r.id; });
+    eq(H.shareWindow(rows, 'all').rows.length, 3, 'everything by default');
+    eq(H.shareWindow(rows, 'all').from, null, 'and no window to report');
+    eq(ids(H.shareWindow(rows, 'n:2')), ['b', 'c'], 'the last two');
+    eq(H.shareWindow(rows, 'n:2').from, '2026-04-10', 'reported from the oldest kept');
+    /* Months count back from the NEWEST ENTRY, not from today: a link built off
+       data that stops in April must not come out empty in September. Six months
+       back from 10 July IS 10 January, and the cutoff DATE ITSELF is included —
+       so m:6 keeps all three here and m:5 is what drops the oldest. */
+    eq(ids(H.shareWindow(rows, 'm:6')), ['a', 'b', 'c'], 'the cutoff day is inside the window');
+    eq(ids(H.shareWindow(rows, 'm:5')), ['b', 'c'], 'five months off the newest');
+    eq(ids(H.shareWindow(rows, 'custom', '2026-07-01')), ['c'], 'from a date');
+    eq(H.shareWindow(rows, 'custom', ''), null, 'custom with no date is UNANSWERED, not all');
+    eq(H.shareWindow(rows, 'nonsense').rows.length, 3, 'anything unknown means everything');
+  });
+  t('names can be left behind, and the shape does not change when they are', () => {
+    const st = { settings: { decimals: 0, showAvg: true, zeroBase: false },
+                 entries: [{ id: 'a', name: 'Rent', value: 1, date: '2026-01-10' },
+                           { id: 'b', name: 'Food', value: 2, date: '2026-02-10' }] };
+    const kept = H.buildSharePayload(st, { keep: 'all', names: true });
+    const gone = H.buildSharePayload(st, { keep: 'all', names: false });
+    const names = (p) => p.entries.map(function (e) { return e.name; });
+    eq(names(kept), ['Rent', 'Food'], 'names ride when asked for');
+    eq(names(gone), ['Entry 1', 'Entry 2'],
+       'and are REPLACED, not dropped: a blank cell cannot be told from a missing one');
+    eq(kept.entries.map(function (e) { return e.value; }), [1, 2], 'the figures always ride');
+    /* `from` is additive and optional, which is why this needs no version bump. */
+    eq(kept.from, undefined, 'an untrimmed link carries no window');
+    eq(H.buildSharePayload(st, { keep: 'n:1' }).from, '2026-02-10', 'a trimmed one does');
+  });
   t('the explanation control is an i, not a ?', () => {
     ok(/>i<\/button>/.test(APP_SRC),
        'Sprint Predictability, Flow Metrics and Money Map all render it as `i`');
@@ -539,6 +589,16 @@ function define() {
     });
     eq(Object.keys(p).sort(), ['entries', 'settings', 'sharedAt', 'v'],
        'a new top-level key in a share payload is a deliberate decision');
+    /* `from` is the one key that comes and goes, and it is ABSENT rather than
+       undefined when the link is not trimmed — JSON.stringify would drop an
+       undefined value, but Object.keys would still report the key. */
+    const trimmed = H.buildSharePayload({
+      entries: [{ id: 'a', name: 'One', value: 1, date: '2026-01-01' },
+                { id: 'b', name: 'Two', value: 2, date: '2026-02-01' }],
+      settings: { decimals: 1, showAvg: false, zeroBase: true },
+    }, { keep: 'n:1' });
+    eq(Object.keys(trimmed).sort(), ['entries', 'from', 'settings', 'sharedAt', 'v'],
+       'a trimmed link says which window it covers, and only then');
     eq(Object.keys(p.entries[0]).sort(), ['date', 'id', 'name', 'value'],
        'and so is a new per-row one');
     eq(p.settings.decimals, 1, 'settings ride along — the figures are meaningless under other rounding');
