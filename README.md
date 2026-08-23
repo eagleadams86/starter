@@ -113,6 +113,16 @@ still reports "all 3 tests pass".
   are named for what they show. `Item 1 / Item 2` teaches nothing.
 - **Headings are Title Case**; body copy, buttons, table column headers and field labels are
   not. An icon never sits flush against the word it follows.
+- **Every dialog closes on a click off it, and the test proves the BEHAVIOUR rather than the
+  list.** A source scan only shows an id is registered — it cannot see a dialog wired through
+  a variable, and a hand-written list checked by a hand-written test agrees with itself for
+  ever. Both failed on the same day: the lottery portfolio's help window had no handler at
+  all, and Money Map's compare window was simply left off. The test here opens every dialog
+  and clicks outside it. **The handler needs both the press AND the release outside**, and
+  must test the pointer against the dialog's box rather than `e.target === this` — a click on
+  the backdrop reports the dialog as the target, but so does one on the dialog's own padding.
+  **There is exactly one documented exception family-wide**: the sync "which copy of your
+  data?" dialog, where either answer replaces a copy and there is no safe default.
 - **A shared block is only shared if you copy the WHOLE thing.** The help window is the
   cautionary tale: when the family first agreed it, only the measure was pinned and the rest
   was left to each app's `dialog h2` and `dialog p`. Five things drifted straight back apart
