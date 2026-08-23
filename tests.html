@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 118;
+const EXPECTED = 119;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -1251,6 +1251,31 @@ function define() {
        'a dot with no entry opens an empty window, and nothing on screen can say so');
     eq(keys.filter((k) => !used.includes(k)).join(', '), '',
        'and an entry no dot points at is a second copy waiting to drift');
+  });
+  t('a note is paragraphs, and it bolds the claim it turns on', () => {
+    /* The family rule, and the reason it is in the starter: a note over about
+       380 characters is <p> blocks, every note bolds the thing it defines or
+       the claim it turns on, and bold stays under about 40% of the characters.
+       That last one is a SHARE and deliberately not "one bold per paragraph" —
+       a note that defines a list bolds one term per item and is right to.
+       Money Map ran 28 notes of 200 to 1,400 characters as single paragraphs
+       until 2026-08-23, which is what this exists to stop happening again. */
+    const src = stripComments(APP_SRC);
+    const at = src.indexOf('const HELP = {');
+    const table = src.slice(at, src.indexOf('\n};', at));
+    const entries = table.split(/\n  (?=\w+: \[)/).slice(1);
+    ok(entries.length >= 1, 'the table was found — ' + entries.length + ' entries');
+    for (const e of entries) {
+      const key = e.split(':')[0].trim();
+      const paras = (e.match(/<p>/g) || []).length;
+      const bolds = (e.match(/<strong>/g) || []).length;
+      const text = e.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').length;
+      ok(paras >= 2 || text <= 380, key + ' is over 380 characters in one paragraph');
+      ok(bolds >= 1, key + ' bolds nothing — the reader has no way in');
+      const boldText = (e.match(/<strong>([\s\S]*?)<\/strong>/g) || [])
+        .join('').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').length;
+      ok(boldText / text < 0.4, key + ' — bold must be a minority of the note');
+    }
   });
   t('nothing a reader typed can reach the help window', () => {
     /* The bodies are innerHTML, which is only safe because each is a literal.

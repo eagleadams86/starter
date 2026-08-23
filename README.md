@@ -126,6 +126,19 @@ still reports "all 3 tests pass".
   already says its working out loud on every card, so a dot beside any of it would be noise.
   Start with the `HELP` table even for one entry — the second dot then costs a table entry
   and nothing else, where a per-button dialog costs another dialog.
+- **A note over about 380 characters is paragraphs, and every note bolds the claim it turns
+  on.** Money Map ran 28 notes of 200 to 1,400 characters as single paragraphs until
+  2026-08-23 — a wall of text on a phone and unskimmable anywhere. Under 380 a note is two
+  or three sentences and breaking it up is its own kind of unreadable, so short ones stay
+  whole. **Bold stays under about 40% of the characters**, which is a SHARE and deliberately
+  not "one bold per paragraph": a note that defines a list bolds one term per item and is
+  right to. All three are pinned in `tests.html`.
+- **Two apps build their help with `createElement` instead of writing HTML, and it is not
+  fussiness.** Money Map and Flow Metrics hold household finances and work data, and both
+  chose `textContent` for their help long ago. When those notes needed paragraphs and bold,
+  the answer was a nine-line renderer over an array of paragraphs — a plain string is text,
+  `b('…')` is bold — rather than switching them to `innerHTML`. If you are starting an app
+  that will hold anything sensitive, copy that shape instead of this one.
 - **There are TWO page widths in this family and a new app picks one.** 1500px is the default
   and what this starts on; 2400px is the ultra-wide, for a page whose content genuinely fills
   it. Don't invent a third — this file carried 1100 for a day, which made the shell the one
