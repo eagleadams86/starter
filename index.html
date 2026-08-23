@@ -649,8 +649,6 @@
      default margins. Putting `margin: 34px 0 0` on each paragraph instead — as
      an earlier draft of this file did — puts 34px above all three and the block
      falls apart. */
-  footer { color: var(--text-muted); font-size: var(--fs-xs); margin-top: var(--sp-8); }
-  footer a, .privacy-links a { color: var(--accent); }
 
   @media print {
     /* The pack does the palette, the margins, the repeated table headings, the
@@ -661,6 +659,31 @@
     .no-print { display: none !important; }
     [data-tab] #entriesPanel, [data-tab] #overviewPanel { display: block !important; }
   }
+/* ── The footer every public page in this account carries ────────────────────
+   Sprint Predictability's, transcribed — it is the design lead for this chrome,
+   and a change here belongs there too. THREE lines, always: what the app does
+   with your data, the privacy policy beside the repo under the label "How it
+   works", and the authorship line.
+
+   The authorship line carries TWO links and the pairing is the part that gets
+   got wrong: "independent personal project" points at NOTICE (who owns it) and
+   "MIT licensed" points at LICENSE (the terms). They were the other way round
+   in Sprint Predictability once — the label promised the licence and landed on
+   the provenance statement, whose own second line then says "See LICENSE for
+   the terms".
+
+   `footer` is a flex ROW so an app with a cross-link to a sibling can put it at
+   the right-hand end; `.footnotes` is what keeps the three paragraphs stacked
+   inside it. Without that wrapper the paragraphs become flex items and lay out
+   side by side, so it is not optional even on a page with no cross-link.
+
+   The links are MUTED rather than accent: this is provenance at the foot of a
+   document, not something to click on the way in. */
+footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.footnotes { flex: 1 1 320px; min-width: 0; }
+.privacy { font-size: var(--fs-xs); color: var(--text-muted); margin: 28px 0 0; padding-left: 19px; }
+.privacy-links { margin-top: 6px; }
+.privacy-links a { color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -864,15 +887,26 @@
      article or section is NOT contentinfo, just a footer for that section. So
      .wrap stays an ordinary <div>. -->
 <footer>
-  <p id="privacyNote">🔒 Private — everything you type stays in this browser. Nothing is
-    uploaded and there is no account.</p>
-  <p class="privacy-links"><a href="privacy.html">Privacy policy</a> &middot;
-    <a href="https://github.com/eagleadams86/starter" target="_blank" rel="noopener noreferrer">How it works</a></p>
-  <!-- Its own element, not part of #privacyNote, whose textContent an app's sync
-       code rewrites as the state changes. -->
-  <p class="privacy-links">&copy; 2026 Charles Adams — an independent personal project,
-    <a href="https://github.com/eagleadams86/starter/blob/main/LICENSE"
-       target="_blank" rel="noopener noreferrer">MIT licensed</a>.</p>
+  <div class="footnotes">
+    <!-- Keeps its id because a shared view rewrites this note's textContent. -->
+    <p class="privacy" id="privacyNote">🔒 Private — your data is stored in this browser only.
+      It is never sent anywhere, and there is no account to sign in to.</p>
+    <p class="privacy privacy-links"><a href="privacy.html">Privacy policy</a> &middot;
+      <a href="https://github.com/eagleadams86/starter" target="_blank" rel="noopener noreferrer">How it works</a></p>
+    <!-- Its own element, deliberately NOT part of #privacyNote: a shared view
+         rewrites that note's textContent, which would silently delete a link
+         nested inside it.
+         TWO links, and the pairing is the part that gets got wrong: "independent
+         personal project" points at NOTICE (who owns it) and "MIT licensed" at
+         LICENSE (the terms). Sprint Predictability had them the other way round
+         once — the label promised the licence and landed on the provenance
+         statement, whose own second line then says "See LICENSE for the terms". -->
+    <p class="privacy privacy-links">&copy; 2026 Charles Adams — an
+      <a href="https://github.com/eagleadams86/starter/blob/main/NOTICE"
+         target="_blank" rel="noopener noreferrer">independent personal project</a>,
+      <a href="https://github.com/eagleadams86/starter/blob/main/LICENSE"
+         target="_blank" rel="noopener noreferrer">MIT licensed</a>.</p>
+  </div>
 </footer>
 </div>
 
@@ -1283,13 +1317,37 @@ function computeAll(entries) {
 
 /* ═══════════════════════════════ Rendering ═══════════════════════════════ */
 
-function render() {
-  const welcome = document.documentElement.hasAttribute('data-welcome');
-  document.getElementById('welcomeCard').hidden = !welcome;
+/* ── The welcome card is DERIVED, never latched ─────────────────────────────
+   Recomputed on every render from whether the app is bare, which is Golf
+   Handicap's arrangement and is what makes Delete All Data return home rather
+   than leaving an empty app with no way back to the three choices. It was
+   latched at boot here and only ever cleared, so clearing everything left the
+   reader looking at an empty table — reported, and correctly, as "it doesn't
+   take you back to the welcome page like the other apps".
+
+   Deriving it also means Start Fresh behaves the way Golf's does: the entry
+   dialog opens over the card, and cancelling returns to it, because with nothing
+   recorded the welcome IS the honest state of the app.
+
+   Never in a shared view: somebody else's snapshot is not this browser's first
+   run, and the card's three buttons would all be wrong there.
+
+   The boot script sets the same attribute BEFORE first paint so the card never
+   arrives a frame late; this is what owns it from then on. */
+function renderWelcome() {
+  const virgin = !viewOnly && !state.entries.length;
+  document.getElementById('welcomeCard').hidden = !virgin;
+  /* The attribute is what CSS hides the tabs and panels with. toggleAttribute,
+     not add/remove, so the two can never disagree. */
+  document.documentElement.toggleAttribute('data-welcome', virgin);
   /* Nothing loaded, nothing to search. A control that opens a window with an
      empty list in it is worse than no control. */
-  document.getElementById('findBtn').hidden = welcome || !state.entries.length;
-  if (welcome) return;
+  document.getElementById('findBtn').hidden = virgin;
+  return virgin;
+}
+
+function render() {
+  if (renderWelcome()) return;
 
   const c = computeAll(state.entries);
   renderViewbar();
@@ -1986,7 +2044,6 @@ function loadSample() {
     if (existing) Object.assign(existing, row);
     else state.entries.push(Object.assign({}, row));
   });
-  leaveWelcome();
   save();
   render();
   toast('Sample data loaded — anything of your own is untouched');
@@ -1996,11 +2053,6 @@ function loadSample() {
 
 const $ = (id) => document.getElementById(id);
 let editingId = null;
-
-function leaveWelcome() {
-  document.documentElement.removeAttribute('data-welcome');
-  $('welcomeCard').hidden = true;
-}
 
 function openEntry(id) {
   editingId = id;
@@ -2034,7 +2086,6 @@ $('entrySave').addEventListener('click', () => {
   } else {
     state.entries.push({ id: uid(), name: name, value: value, date: date });
   }
-  leaveWelcome();
   save();
   render();
   $('entryDialog').close();
@@ -2101,8 +2152,8 @@ $('clearFind').addEventListener('click', () => {
 
 $('sampleBtn').addEventListener('click', loadSample);
 $('firstSample').addEventListener('click', loadSample);
-$('firstAdd').addEventListener('click', () => { leaveWelcome(); render(); openEntry(null); });
-$('firstRestore').addEventListener('click', () => { leaveWelcome(); render(); $('importFile').click(); });
+$('firstAdd').addEventListener('click', () => openEntry(null));
+$('firstRestore').addEventListener('click', () => $('importFile').click());
 
 $('helpBtn').addEventListener('click', () => openModal($('helpDialog')));
 $('helpDone').addEventListener('click', () => $('helpDialog').close());
@@ -2188,7 +2239,6 @@ $('importFile').addEventListener('change', () => {
                + (incoming.entries.length === 1 ? ' entry' : ' entries')
                + '?\n\nThis replaces everything currently in this browser.')) return;
     state = incoming;
-    leaveWelcome();
     save();
     render();
     $('dataDialog').close();
@@ -2299,8 +2349,6 @@ async function boot() {
   } else {
     load();
   }
-  /* A shared view never shows the welcome, and never counts as a first run. */
-  if (viewOnly) leaveWelcome();
   setTheme(localStorage.getItem(THEME_KEY) || 'auto');
   setTab(localStorage.getItem(TAB_KEY) || TABS[0]);
   /* Every edit surface goes in a shared view. The table already renders
@@ -2334,7 +2382,7 @@ boot();
    this suite is read-only about storage and has to stay that way: it runs
    against the reader's own copy of the app. */
 window.__starterTestHooks = {
-  __plant: function (next) { state = normalizeState(next); leaveWelcome(); render(); },
+  __plant: function (next) { state = normalizeState(next); render(); },
   __state: function () { return state; },
   SCHEMA: SCHEMA, ID_RE: ID_RE, STORAGE_KEY: STORAGE_KEY, THEME_KEY: THEME_KEY,
   TAB_KEY: TAB_KEY, TABS: TABS, SHARE_FORMAT: SHARE_FORMAT, SHARE_PAYLOAD_V: SHARE_PAYLOAD_V,
