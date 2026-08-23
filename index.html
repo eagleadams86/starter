@@ -662,6 +662,29 @@
   /* Export buttons sit in a card's heading row, so they are chrome rather than
      the action the page is asking for. */
   .btn-small { min-height: var(--chrome-h); padding: 4px 9px; font-size: var(--fs-xs); }
+  /* ── The header row on TOUCH ───────────────────────────────────────────────
+     theme.css puts every <select> at 16px on a coarse pointer (pack rule 10, the
+     iOS focus-zoom floor) and rightly leaves <button> alone — a button raises no
+     keyboard, so it has no zoom to avoid. What that left, in every app in the
+     family at once, is a header row whose PICKERS carry a label a size bigger
+     than the buttons beside them, and stand a pixel taller with it. The rule is
+     right; the apps never answered it.
+
+     So on touch the row's buttons take the same 16px, and the height everything
+     in the row is pinned to grows 30px → 34px, which is exactly what 16px text
+     measures in the 4px/9px box the row already uses (24px line + 8px padding +
+     2px border). Mouse sizes are untouched, which is where the chrome height
+     actually reads — pack rule 10 says so in as many words.
+
+     `.btn-small` is chrome too (a card's export buttons) and takes the same
+     step; `.icon-btn` grows with the token, and deliberately: its square is
+     --chrome-h because a row action is the same class of thing, and a 34px
+     target on touch is the right side of that trade. A new app inherits all of
+     it from here. Fixed in all six apps on 2026-08-23. */
+  @media (pointer: coarse) {
+    :root { --chrome-h: 34px; }
+    .headbar button, .btn-small { font-size: var(--fs-base); }
+  }
 
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
              overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
