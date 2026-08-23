@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 104;
+const EXPECTED = 118;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -1180,6 +1180,87 @@ function define() {
     const src = stripComments(APP_SRC);
     const tiles = (src.match(/const tiles = \[([\s\S]*?)\];/) || [])[1] || '';
     eq((tiles.match(/^\s*\[/gm) || []).length, 5, 'five tiles in renderStats');
+  });
+
+  /* ── The info dot and the help window ──────────────────────────────────────
+     Two family-wide blocks, the same declarations in every app that has one, so
+     a new app copied from here starts on them rather than re-deriving them.
+     This file was the pre-sweep shape until 2026-08-23: a `.help-btn` with no
+     tap target, a window that took the app's own 560px and 24px padding, prose
+     at `--fs-xs` from `dialog p`, and a button that said Close.
+     What is pinned is the whole block, because the first attempt at sharing
+     this window pinned only the measure and five things drifted back apart
+     through inheritance alone. */
+  group('the info dot and the help window');
+  t('the dot is the family circle, declared property by property', () => {
+    ok(/\.tile-help \{[^}]*width: 16px; height: 16px; min-height: 0;/.test(APP_SRC),
+       '16px, and opted out of any button floor an app puts under its controls');
+    ok(/\.tile-help \{[^}]*border-radius: 50%;/.test(APP_SRC)
+       && /\.tile-help \{[^}]*background: transparent;/.test(APP_SRC),
+       'an outlined circle, not a filled pill');
+    ok(/\.tile-help \{[^}]*margin-left: 7px;/.test(APP_SRC),
+       'off the word it follows — a standing preference in every app');
+    ok(/\.tile-help::after \{ content: ''; position: absolute; inset: -4px; \}/.test(APP_SRC),
+       "the 24px tap target, WCAG 2.2's, grown from the target and not the circle");
+    ok(/\.tile-help:hover \{ background: var\(--surface-alt\); border-color: var\(--text-secondary\);/
+       .test(APP_SRC),
+       'and the hover fills rather than borrowing --focus-border, which would '
+       + 'say "focused" to anybody reading the two states side by side');
+    eq((APP_SRC.match(/help-btn/g) || []).length, 0,
+       'the old class name is gone — a new app must not start on it');
+  });
+  t('every dot draws an "i", never a "?"', () => {
+    const bare = stripComments(APP_SRC);
+    const dots = bare.match(/<button[^>]*class="tile-help"[\s\S]*?<\/button>/g) || [];
+    ok(dots.length >= 1, 'the dot is still there');
+    eq(dots.filter((d) => !/>i<\/button>/.test(d)).join(' | '), '',
+       '"?" is the glyph a browser already puts on its own help cursor and in a '
+       + "form's validation bubble, and it asks where this answers");
+    eq(dots.filter((d) => !/aria-label="/.test(d)).join(' | '), '',
+       'and each says what it explains — a bare glyph reads as nothing');
+  });
+  t('the window is sized by its text, and everything else is declared', () => {
+    ok(/#helpDialog \{ width: fit-content; max-width: calc\(100% - 32px\); padding: 20px; \}/
+       .test(APP_SRC),
+       'sized by what is in it, still fits a phone, and 20px rather than this '
+       + "file's own --sp-7 — padding is the only thing left deciding the width");
+    ok(/#helpTitle \{ margin: 0 0 12px; font-size: var\(--fs-md\); font-weight: 600;\s*color: var\(--text-primary\); \}/
+       .test(APP_SRC),
+       'the heading is pinned — unset, an h2 defaults to bold at 700');
+    ok(/#helpBody \{ max-width: 66ch; font-size: var\(--fs-sm\); line-height: 1\.55;\s*color: var\(--text-secondary\); \}/
+       .test(APP_SRC),
+       'the 66-character measure, the family reading size, and a colour of its '
+       + "own — `dialog p` would otherwise make this help 13px");
+    ok(/#helpBody p, #helpBody li \{ font-size: inherit; line-height: inherit;\s*color: inherit; margin: 0 0 10px; \}/
+       .test(APP_SRC), 'paragraphs follow the box, at 10px apart and not the browser\'s 1em');
+    ok(/#helpBody strong \{ color: var\(--text-primary\); \}/.test(APP_SRC),
+       'and bold is lifted, or it is carried by weight alone');
+    ok(/id="helpCloseBtn">Got It</.test(APP_SRC), '"Got It", as in every other app');
+  });
+  t('one window, filled from a table by key — not a dialog per button', () => {
+    const src = stripComments(APP_SRC);
+    ok(/const HELP = \{/.test(src), 'the table exists, even at one entry');
+    ok(/closest\('\.tile-help'\)/.test(src),
+       'one delegated listener, so a dot added by a later render needs no wiring');
+    const used = [...new Set([...stripComments(APP_SRC).matchAll(/data-help="(\w+)"/g)]
+      .map((m) => m[1]))];
+    const keys = [...(src.match(/const HELP = \{[\s\S]*?\n\};/) || [''])[0]
+      .matchAll(/^  (\w+): \[/gm)].map((m) => m[1]);
+    ok(used.length >= 1, 'a dot was found — ' + used.join(', '));
+    eq(used.filter((k) => !keys.includes(k)).join(', '), '',
+       'a dot with no entry opens an empty window, and nothing on screen can say so');
+    eq(keys.filter((k) => !used.includes(k)).join(', '), '',
+       'and an entry no dot points at is a second copy waiting to drift');
+  });
+  t('nothing a reader typed can reach the help window', () => {
+    /* The bodies are innerHTML, which is only safe because each is a literal.
+       An entry's name is free text and would be an injection the moment one
+       arrived here. */
+    const src = stripComments(APP_SRC);
+    const at = src.indexOf('const HELP = {');
+    const table = src.slice(at, src.indexOf('\n};', at));
+    ok(at > 0 && !/\besc\(|\bstate\.|\bentries\b|\$\(/.test(table),
+       'the table reads nothing from the data — every body is a literal');
   });
 }
 

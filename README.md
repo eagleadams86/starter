@@ -58,7 +58,8 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 | **Two tabs** | `data-tab` on `<html>` set in `<head>`; CSS switches, a real tablist with arrow keys, both panels print |
 | **Summary tiles** | Five, on `subgrid` so labels line up across a row; the spans assume five |
 | **A chart** | SVG, so it follows a theme change *and* the print palette for free. Tint fill + full-strength edge (pack rule 3), `--series-*` only (rule 4). Drawn at the box's own pixel size and redrawn when it changes, so nothing is ever scaled |
-| **A chart card** | The siblings' anatomy: name, an `i` that opens the help sheet, a sentence saying what is plotted, a 300px box, and a button that lifts the chart out to fill the window (Escape, the button again, or a click outside) |
+| **A chart card** | The siblings' anatomy: name, an info dot, a sentence saying what is plotted, a 300px box, and a button that lifts the chart out to fill the window (Escape, the button again, or a click outside) |
+| **The info dot and the help window** | Two family-wide blocks, declared property by property and identical in all seven windows: a 16px outlined circled **i** (never a `?`) with a 24px tap target from an unpainted `::after`, and a window sized by its own text — `#helpBody` capped at 66 characters, `#helpDialog` at `width: fit-content` — which comes out at **666px with 624px of text** everywhere. One window for the whole app, filled from a `HELP` table by `data-help` key, dismissed with **Got It**. Copy the blocks; do not re-derive them |
 | **Find** | TWO, as Golf Handicap has: ⌕ in the header (⌘K) searches everything and jumps to the record; the box in the table narrows what you're looking at |
 | **Sortable columns** | Flow Metrics' three-state cycle — the column's own direction, reversed, then back to the table's own order |
 | **Copy / ⬇ CSV** | On the table, reading the RENDERED DOM so the export is what you're looking at; formula cells defused, thousands quoted |
@@ -81,7 +82,7 @@ later:
 | `viewOnly` | one flag, checked in `save()` — the single write path |
 | the `storage` listener | adopts another tab's write, and never saves from inside it |
 
-**A test suite with a floor.** 99 tests pinning all of the above, and an `EXPECTED` constant
+**A test suite with a floor.** 118 tests pinning all of the above, and an `EXPECTED` constant
 so a test that goes *missing* fails the build — a suite that quietly shrank to three checks
 still reports "all 3 tests pass".
 
@@ -112,6 +113,19 @@ still reports "all 3 tests pass".
   are named for what they show. `Item 1 / Item 2` teaches nothing.
 - **Headings are Title Case**; body copy, buttons, table column headers and field labels are
   not. An icon never sits flush against the word it follows.
+- **A shared block is only shared if you copy the WHOLE thing.** The help window is the
+  cautionary tale: when the family first agreed it, only the measure was pinned and the rest
+  was left to each app's `dialog h2` and `dialog p`. Five things drifted straight back apart
+  within the day — an unset heading weight defaults to bold at 700, an unset paragraph
+  colour lands on `--text-primary`, browser paragraph spacing is 1em rather than 10px, bold
+  inside a `--text-secondary` paragraph has nothing lifting it, and each app's own dialog
+  padding turned one measure into a 674px, a 666px and a 662px window. If a property matters,
+  write it down; the cascade is not a place to leave an agreement.
+- **A dot goes wherever a number is the result of arithmetic the reader cannot see, and
+  nowhere else.** Money Map runs 28 of them and PAPTrack three, and both are right: PAPTrack
+  already says its working out loud on every card, so a dot beside any of it would be noise.
+  Start with the `HELP` table even for one entry — the second dot then costs a table entry
+  and nothing else, where a per-button dialog costs another dialog.
 - **There are TWO page widths in this family and a new app picks one.** 1500px is the default
   and what this starts on; 2400px is the ultra-wide, for a page whose content genuinely fills
   it. Don't invent a third — this file carried 1100 for a day, which made the shell the one

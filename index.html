@@ -876,21 +876,67 @@
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
              overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-  /* An icon must NEVER sit flush against the word it follows — a standing
-     preference across every app in this family.
+  /* ── The info dot ──────────────────────────────────────────────────────────
+     A circled "i" beside a label, opening the help window below rather than a
+     hover tooltip so it works the same on a phone. THE SAME BLOCK IS IN EVERY
+     APP THAT HAS ONE, PROPERTY BY PROPERTY (2026-08-23) — copy it, do not
+     re-derive it, and a change to any of it belongs in all of them.
 
-     THE GLYPH IS `i`, NOT `?`, and the box is the siblings': 16px, transparent,
-     on --border-control. Sprint Predictability, Flow Metrics and Money Map all
-     render an explanation control as a lowercase i in a circle (`.tile-help`);
-     this file had a filled 18px `?`, which is the same control drawn as a
-     different thing. A question mark also promises an answer to a question the
-     reader asked, where `i` offers a note they can ignore. */
-  .help-btn { margin-left: 7px; width: 16px; height: 16px; min-height: 16px; padding: 0;
-              border-radius: var(--radius-pill); font-size: var(--fs-xs); line-height: 1;
-              font-weight: var(--fw-bold); background: transparent;
-              border: 1px solid var(--border-control);
-              color: var(--text-secondary); flex: 0 0 auto; }
-  .help-btn:hover { color: var(--text-primary); background: var(--surface-alt); }
+     THE GLYPH IS `i`, NOT `?`. "?" is the glyph a browser already puts on its
+     own help cursor and in a form's validation bubble, and it asks a question
+     where this thing answers one — it promises an answer to something the
+     reader asked, where `i` offers a note they can ignore. Golf Handicap and
+     the NY calculator drew a filled 18px "?" until the family sweep; this file
+     did too, before that.
+
+     An icon must NEVER sit flush against the word it follows — a standing
+     preference across every app in this family, and the 7px margin is it.
+     `min-height: 0` opts out of any button floor an app puts under its
+     controls; ::after inflates the tap target to WCAG 2.2's 24px without
+     painting anything and without changing the line's height, which is why a
+     dot never makes a row taller. The hover FILLS rather than borrowing
+     `--focus-border`: a hover in the focus colour says "focused" to anybody
+     reading the two states side by side. */
+  .tile-help { display: inline-flex; align-items: center; justify-content: center;
+    position: relative; box-sizing: border-box; flex: none;
+    width: 16px; height: 16px; min-height: 0; padding: 0; margin-left: 7px;
+    border: 1px solid var(--border-control); border-radius: 50%;
+    background: transparent; color: var(--text-secondary);
+    font-family: inherit; font-size: var(--fs-xs); font-weight: 700;
+    line-height: 1; text-transform: none; cursor: pointer; vertical-align: 1px; }
+  .tile-help:hover { background: var(--surface-alt); border-color: var(--text-secondary);
+    color: var(--text-primary); }
+  .tile-help::after { content: ''; position: absolute; inset: -4px; }
+
+  /* ── The help window ───────────────────────────────────────────────────────
+     THE SAME RULES ARE IN EVERY APP THAT HAS ONE (2026-08-23). They are about
+     the TEXT sizing the window rather than the window holding the text: this is
+     the one dialog that is nothing but prose, so `#helpBody` is capped at a
+     66-character reading measure and `fit-content` makes the window take that
+     cap as its width. Both or neither — the cap alone leaves the paragraph
+     hugging the left of a window sized for a table with the rest of it empty,
+     and `fit-content` alone lets the lines run the full width at about 150
+     characters, roughly twice what anybody reads comfortably.
+
+     EVERYTHING ELSE HERE IS DECLARED RATHER THAN INHERITED, and that is the
+     lesson rather than the detail. When the family first shared this window,
+     only the measure was pinned and the rest was left to each app's `dialog h2`
+     and `dialog p` — and five things drifted straight back apart: an unset
+     heading weight defaults to bold (700), an unset paragraph colour lands on
+     `--text-primary`, browser paragraph spacing is 1em rather than 10px, bold
+     inside a `--text-secondary` paragraph has nothing lifting it, and each
+     app's own dialog padding was the only thing left deciding the width. All
+     seven windows are 666px with 624px of text because all of it is written
+     down here. `padding: 20px` overrides this file's own `--sp-7`. */
+  #helpDialog { width: fit-content; max-width: calc(100% - 32px); padding: 20px; }
+  #helpTitle { margin: 0 0 12px; font-size: var(--fs-md); font-weight: 600;
+    color: var(--text-primary); }
+  #helpBody { max-width: 66ch; font-size: var(--fs-sm); line-height: 1.55;
+    color: var(--text-secondary); }
+  #helpBody p, #helpBody li { font-size: inherit; line-height: inherit;
+    color: inherit; margin: 0 0 10px; }
+  #helpBody p:last-child, #helpBody li:last-child { margin-bottom: 0; }
+  #helpBody strong { color: var(--text-primary); }
 
   /* ── The toast is a POPOVER, and that is the only way it can be seen while a
      dialog is open. A modal <dialog> sits in the browser's TOP LAYER, which
@@ -1069,8 +1115,8 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
 
     <div class="card" id="chartCard">
       <h2>Over Time
-        <button class="help-btn" id="helpBtn" type="button"
-                title="How this chart is drawn" aria-label="How this chart is drawn">i</button>
+        <button class="tile-help" type="button" data-help="chart"
+                aria-label="How this chart is drawn">i</button>
         <span class="spacer"></span>
         <span class="pill" id="chartCount"></span>
       </h2>
@@ -1386,17 +1432,19 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
      layer would paint over the header this exists to keep. -->
 <div id="chartMaxi" role="dialog"></div>
 
+<!-- The help window. ONE window for the whole app, filled from the HELP table
+     by whichever info dot was pressed — that is the shape every sibling uses,
+     and it is worth starting with even for a single entry: the second dot costs
+     an entry in the table and nothing else, where a per-button dialog costs
+     another dialog. The heading and the body are both replaced on open; what is
+     in the markup is what a reader with no script would see. It is not sized
+     here — the two rules in the stylesheet let its own text set its width — and
+     "Got It" is the family's word for dismissing it, on `id="helpCloseBtn"`. -->
 <dialog id="helpDialog" aria-labelledby="helpTitle">
-  <h2 id="helpTitle">How This Chart Is Drawn</h2>
-  <p>Help lives behind a <strong>?</strong> beside the thing it explains, in plain English,
-    wherever the page assumes knowledge the reader may not have.</p>
-  <p>Each bar is a tint of its colour with the colour itself on the edge, which is the
-    family's chart convention: a large flat area of a saturated colour is hard to read
-    against, and the outline is what carries the identity. The colours come from the shared
-    palette and are checked against each other under two kinds of colour blindness, so no
-    figure is ever told apart by hue alone.</p>
+  <h2 id="helpTitle">About</h2>
+  <div id="helpBody"></div>
   <div class="row-actions">
-    <button type="button" class="primary" id="helpDone">Close</button>
+    <button type="button" class="primary" id="helpCloseBtn">Got It</button>
   </div>
 </dialog>
 
@@ -2073,7 +2121,7 @@ function goToSearchHit(h) {
    value of 4 into the text "4 ⚑" and costing the column its numbers. */
 function cellText(cell) {
   const copy = cell.cloneNode(true);
-  copy.querySelectorAll('[aria-hidden="true"], .sr-only, .pill, .help-btn')
+  copy.querySelectorAll('[aria-hidden="true"], .sr-only, .pill, .tile-help')
     .forEach((el) => el.remove());
   return copy.textContent.replace(/\s+/g, ' ').trim();
 }
@@ -2610,8 +2658,34 @@ $('firstSample').addEventListener('click', loadSample);
 $('firstAdd').addEventListener('click', () => openEntry(null));
 $('firstRestore').addEventListener('click', () => $('importFile').click());
 
-$('helpBtn').addEventListener('click', () => openModal($('helpDialog')));
-$('helpDone').addEventListener('click', () => $('helpDialog').close());
+/* ── The info dots ──────────────────────────────────────────────────────────
+   A dot goes wherever a number on screen is the result of arithmetic the reader
+   cannot see, and NOWHERE ELSE — a dot beside something the page already
+   explains in a line under it is noise. Money Map runs 28 of these and PAPTrack
+   three, and both are right for what they show.
+
+   The text is a LITERAL in this file, every time. These bodies are written with
+   innerHTML so they can carry <strong> and more than one paragraph, and nothing
+   a reader typed may ever reach it — a record's name is free text and would be
+   an injection the moment one arrived here. If a body ever needs to quote the
+   reader's own words, write it with textContent instead.
+
+   One delegated listener, so a dot added by a later render needs no wiring. */
+const HELP = {
+  chart: ['How This Chart Is Drawn', `<p>Each bar is a <strong>tint of its colour with the colour itself on the edge</strong>, which is the family's chart convention: a large flat area of a saturated colour is hard to read against, and the outline is what carries the identity.</p>
+    <p>The colours come from the shared palette and are checked against each other under two kinds of colour blindness, so <strong>no figure here is ever told apart by hue alone</strong>. The chart is SVG rather than canvas, which is why it follows a theme change and the print palette without being redrawn by hand.</p>`],
+};
+const helpDialog = $('helpDialog');
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest ? e.target.closest('.tile-help') : null;
+  if (!btn) return;
+  const h = HELP[btn.dataset.help];
+  if (!h) return;
+  $('helpTitle').textContent = h[0];
+  $('helpBody').innerHTML = h[1];
+  openModal(helpDialog);
+});
+$('helpCloseBtn').addEventListener('click', () => helpDialog.close());
 
 /* ── Settings ─────────────────────────────────────────────────────────────── */
 $('settingsBtn').addEventListener('click', () => {
