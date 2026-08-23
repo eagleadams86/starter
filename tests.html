@@ -319,6 +319,43 @@ function define() {
     eq((APP_SRC.match(/<option value="(?:auto|midnight|dark|light|sepia)" selected>/g) || []).length, 1,
        'exactly one option may carry it');
   });
+  /* ── The chart card carries what every sibling's carries ──────────────────
+     Added 2026-08-23, when the starter's chart was measured against Sprint
+     Predictability's and Flow Metrics' and found to be missing four things. */
+  t('the chart says what it plots, under its name', () => {
+    ok(/<p class="chart-title">/.test(APP_SRC),
+       'both siblings carry a sentence under the chart name; this one had none');
+  });
+  t('the chart box has a HEIGHT of its own', () => {
+    const css = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+    ok(/\.chart-wrap\s*\{[^}]*height:\s*300px/.test(css),
+       'without it the drawing sized the card, which nothing else on the page does');
+  });
+  t('the drawing is made at the box size, so nothing is scaled', () => {
+    const src = stripComments(APP_SRC);
+    ok(/Math\.round\(box\.width\)/.test(src) && /Math\.round\(box\.height\)/.test(src),
+       'a fixed viewBox stretched to the card made 2px strokes 3.4px on a desktop');
+    ok(/new ResizeObserver/.test(src),
+       'and a drawing made at a size has to be remade when that size changes');
+  });
+  t('the explanation control is an i, not a ?', () => {
+    ok(/>i<\/button>/.test(APP_SRC),
+       'Sprint Predictability, Flow Metrics and Money Map all render it as `i`');
+  });
+  t('a chart can fill the window, and comes back down three ways', () => {
+    const src = stripComments(APP_SRC);
+    ok(/id="chartMaxi"/.test(src), 'the overlay the card is moved into');
+    ok(/className = 'chart-max'/.test(src), 'and the button that moves it');
+    /* Moved, not copied: a second copy would leave every render painting the one
+       left behind while the chart on screen went stale. */
+    ok(/ov\.appendChild\(card\)/.test(src), 'the real card is MOVED into the overlay');
+    ok(/e\.key !== 'Escape'/.test(src), 'Escape closes');
+    ok(/startedOutside/.test(src), 'a click outside closes, and only if it started outside');
+    /* The iOS fix: body{overflow:hidden} unsticks a sticky header, so the strip
+       this overlay keeps clear would show page content instead of the menu. */
+    ok(/maxiScrollY = window\.scrollY/.test(src) && /window\.scrollTo\(0, 0\)/.test(src),
+       'the page goes to the top first, or the sticky header leaves on iOS');
+  });
   t('slate is the ONE id that maps to a palette rather than to the default', () => {
     ok(/t === 'slate'\) t = 'dark'/.test(stripComments(APP_SRC)),
        'slate is Dark renamed — sending it to Auto would change what a reader sees');
