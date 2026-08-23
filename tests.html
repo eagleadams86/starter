@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 103;
+const EXPECTED = 104;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -731,6 +731,43 @@ function define() {
        'the same three Money Map opens on');
     const css = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
     ok(/html\[data-welcome\] \.tabs/.test(css), 'and the tabs go while it is up');
+  });
+  t('the welcome card is ONE measure and ONE colour', () => {
+    /* It had three measures (46ch, 52ch, 54ch) and two colours, because the
+       first-run card borrowed Golf Handicap's deeper treatment while the rest
+       came from Sprint Predictability — so the lede, the privacy line and the
+       three button notes each wrapped at a different width and the card read as
+       something assembled from parts. Reported, and this is what stops it coming
+       back. */
+    const card = W.document.querySelector('#welcomeCard .empty');
+    ok(card, 'the welcome card must exist');
+    const wasHidden = W.document.getElementById('welcomeCard').hidden;
+    W.document.getElementById('welcomeCard').hidden = false;
+    try {
+      const ps = [...card.querySelectorAll('p')];
+      ok(ps.length >= 5, 'the lede, the privacy line, the buttons and one note per button');
+      const widths = [...new Set(ps.map((el) => Math.round(el.getBoundingClientRect().width)))];
+      eq(widths.length, 1, 'every paragraph shares one measure');
+      const colours = [...new Set(ps.map((el) => W.getComputedStyle(el).color))];
+      eq(colours.length, 1, 'and one colour');
+      const sizes = [...new Set(ps.map((el) => W.getComputedStyle(el).fontSize))];
+      eq(sizes.length, 1, 'and one size');
+      /* Only the heading is different, and it is --text-primary at xl. */
+      const h = card.querySelector('h2');
+      eq(W.getComputedStyle(h).fontSize,
+         W.getComputedStyle(W.document.documentElement).getPropertyValue('--fs-xl').trim()
+           .endsWith('rem')
+             ? Math.round(parseFloat(W.getComputedStyle(W.document.documentElement)
+                 .getPropertyValue('--fs-xl')) * 16) + 'px'
+             : W.getComputedStyle(h).fontSize,
+         'the heading is --fs-xl');
+      ok(W.getComputedStyle(h).color !== colours[0], 'and the only line in a different colour');
+      eq(Math.round(h.getBoundingClientRect().left),
+         Math.round(ps[0].getBoundingClientRect().left),
+         'heading and body share a left edge — the block is centred as one thing');
+    } finally {
+      W.document.getElementById('welcomeCard').hidden = wasHidden;
+    }
   });
   t('the sample data reaches every case, and says what each one shows', () => {
     /* THE SAMPLE DATA IS THE DEMO. A feature is not finished until it appears

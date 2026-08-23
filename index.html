@@ -491,20 +491,27 @@
              border-radius: var(--radius); background: var(--surface-alt);
              padding: 11px 14px; margin-bottom: var(--sp-6); font-size: var(--fs-xs); }
 
-  .empty { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
-  .empty h2 { color: var(--text-primary); }
-  .empty p { max-width: 46ch; margin: 0 auto var(--sp-5); }
-  /* The first-run card holds the WHOLE PAGE on its own — the tabs and both
-     panels are hidden while it is up — so it gets a deeper, wider treatment than
-     the app's other empty states. Scoped to `.first-run` for exactly that
-     reason: a filtered list or a shared view with nothing in it keeps the quiet
-     version, which is right for a message you land on mid-task. */
-  .empty.first-run { padding: var(--sp-9) var(--sp-6); }
-  .empty.first-run .lede { font-size: var(--fs-md); max-width: 54ch;
-                           color: var(--text-primary); margin-bottom: var(--sp-7); }
-  .empty.first-run .hint { margin-top: var(--sp-7); max-width: 52ch; }
-  .first-run-actions { display: flex; flex-wrap: wrap; gap: var(--sp-5);
-                       align-items: center; justify-content: center; }
+  /* ── Empty states, including the welcome card ───────────────────────────────
+     Sprint Predictability's, and the thing to keep is that there is ONE MEASURE
+     AND ONE COLOUR. Every paragraph sits in the same 80ch column and reads at
+     --text-secondary; only the heading is --text-primary. That is what makes the
+     block read as one piece of writing.
+
+     This file had THREE measures (46ch, 52ch, 54ch) and two colours, because the
+     first-run card borrowed Golf Handicap's deeper `.first-run` treatment while
+     the rest came from here — so the lede, the privacy line and the three button
+     notes each wrapped at a different width and the card looked assembled from
+     parts. If a paragraph needs its own width, that is a sign it does not belong
+     in this block.
+
+     `.empty` is the same class the table and the chart use when they have nothing
+     to show, and that is deliberate too: one empty state, one treatment. */
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-secondary);
+           max-width: 80ch; margin-left: auto; margin-right: auto; }
+  .empty h2 { font-size: var(--fs-xl); margin: 0; color: var(--text-primary); }
+  /* The buttons sit in a paragraph like everything else, so the rhythm above and
+     below them is the same as between any two lines. */
+  .empty .actions { margin-top: 16px; }
 
   /* ── Find ───────────────────────────────────────────────────────────────────
      The filter never reaches the figures and the line beside it says so out
@@ -771,37 +778,34 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
        need. It is pure display: nothing is deleted and nothing stored, and the
        same render() puts the app back. -->
   <div class="card welcome" id="welcomeCard" hidden>
-    <div class="empty first-run">
+    <div class="empty">
       <h2>Welcome to Starter</h2>
-      <!-- What the app IS, in the reader's terms, before anything about how it
-           works. The lede is a size up and given a wider measure because this
-           card is holding the whole page. -->
-      <p class="lede">A shell you can build an app on. It already carries this family's
-        palette, type and chrome, its dialogs and charts, read-only sharing, offline and
-        backups — and the guards that stop saved data being quietly mangled. Everything in it
-        is a worked example of a rule the other apps follow.</p>
-      <!-- The privacy sentence sits on the welcome card in every app in the
-           family, because it is the question a first-time visitor actually has
-           and the footer is a long way down. -->
-      <p>Everything you enter stays in this browser. Nothing is uploaded, and there is no
-        account.</p>
-      <div class="first-run-actions">
+      <!-- What the app IS, in the reader's own terms — somebody deciding whether
+           this is the thing they want decides off this paragraph, so it says what
+           it does rather than promising anything. -->
+      <p>A shell you can build an app on. It already carries this family's palette, type and
+        chrome, its dialogs and charts, read-only sharing, offline and backups — and the
+        guards that stop saved data being quietly mangled. Everything in it is a worked
+        example of a rule the other apps follow.</p>
+      <!-- The privacy claim the footer three inches below already makes, and the
+           two must never disagree. -->
+      <p>Everything you enter stays in this browser. Nothing is uploaded — there is no account
+        and no server.</p>
+      <p class="actions">
         <button type="button" class="primary" id="firstAdd">Start Fresh</button>
         <button type="button" id="firstSample">Load Sample Data</button>
-        <button type="button" id="firstRestore">Restore a Backup</button>
-      </div>
-      <!-- ONE PARAGRAPH PER BUTTON, each opening with the button's own words in
-           bold. A single run-on sentence covering all three is the version this
-           card had first, and it reads as small print rather than as three
-           choices — the reader has to parse the whole thing to find the one
-           sentence that is about the button they were looking at. -->
-      <p class="hint"><strong>Start Fresh</strong> opens an empty app on the ＋ Add Entry
-        button — the way in if you already know what you want to record.</p>
-      <p class="hint"><strong>Load Sample Data</strong> fills every tile, the chart and the
-        table with an invented set, so every figure on both tabs has something behind it. Each
-        row is named for the case it demonstrates rather than being filler.</p>
-      <p class="hint"><strong>Restore a Backup</strong> reads a Starter export — the JSON file
-        the Back Up window writes.</p>
+        <button type="button" id="firstRestore">Restore a Backup</button></p>
+      <!-- ONE PARAGRAPH PER BUTTON, each opening with the button's own words, so
+           a reader can find the one they are hovering over. A single run-on
+           sentence covering all three reads as small print rather than as three
+           choices. -->
+      <p><strong>Start Fresh</strong> opens an empty app on the ＋ Add Entry button — the way
+        in if you already know what you want to record.</p>
+      <p><strong>Load Sample Data</strong> fills every tile, the chart and the table with an
+        invented set, so every figure on both tabs has something behind it. Each row is named
+        for the case it demonstrates rather than being filler.</p>
+      <p><strong>Restore a Backup</strong> reads a Starter export — the JSON file the Back Up
+        window writes.</p>
     </div>
   </div>
 
