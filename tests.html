@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 99;
+const EXPECTED = 100;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -187,7 +187,41 @@ async function runAsync() {
   } catch (e) { asyncResults.newer = { thrown: true, flagged: !!e.newerVersion }; }
 }
 
+/* ── The suite plants what it needs, and never trusts what it finds ──────────
+   A fixed set, not the app's own sample data: those dates count back from today
+   so a test asserting an order would drift, and the point of a fixture is that
+   it cannot. Three rows, chosen so a sort has something to say — a negative, a
+   grouped thousand, and names whose alphabetical order disagrees with both the
+   value order and the date order. */
+const FIXTURE = { version: 1, entries: [
+  { id: 'fx-neg', name: 'Charlie negative', value: -320, date: '2026-01-05' },
+  { id: 'fx-big', name: 'Alpha thousands', value: 12500, date: '2026-03-09' },
+  { id: 'fx-mid', name: 'Bravo ordinary', value: 45, date: '2026-02-17' },
+], settings: { decimals: 0, showAvg: true, zeroBase: true } };
+
 function define() {
+  /* This is the line that made five DOM tests pass on a laptop and fail in CI:
+     a fresh profile boots the app into the welcome card, where render() returns
+     early and there is no table at all. The browser's own saved data is ambient
+     state, and a suite that leans on it reports on a build nobody else has. */
+  const booted = W.document.documentElement.hasAttribute('data-welcome')
+              || !!W.document.getElementById('entriesTable');
+  H.__plant(FIXTURE);
+  W.setTab('entries');
+
+  group('the suite plants its own data');
+  t('the app is rendered from a FIXTURE, not from this browser’s saved copy', () => {
+    ok(booted, 'the app booted into one of its two real states');
+    eq(H.__state().entries.length, 3, 'and the suite then planted its own three rows');
+    ok(W.document.getElementById('entriesTable'), 'so there is a table to read');
+    /* The promise this suite makes about the reader's own data — read off the
+       app's source, not asserted against nothing. */
+    const hook = (stripComments(APP_SRC).match(/__plant: function[^\n]*/) || [''])[0];
+    ok(hook, 'the plant hook must exist');
+    ok(hook.indexOf('save()') === -1,
+       'plant must never write — this suite runs against the reader’s own copy');
+  });
+
   /* ═══════════════════════════════════════════════════════════════════════
      THE FAMILY RULES. Each pins something that went wrong in this family at
      least once. Keep them and add your own; they cost nothing and they are the
@@ -817,14 +851,19 @@ function define() {
   });
   t('sorting works live, and the third press restores the original order', () => {
     const names = () => [...W.document.querySelectorAll('#entriesTable tbody tr th')]
-      .map((x) => x.textContent.trim());
+      .map((x) => x.textContent.trim().split(' ')[0]);
     const press = (k) => W.document.querySelector('[data-sort="' + k + '"]').click();
-    const start = names();
+    /* Newest first is the table's own order, and the fixture's three names are
+       deliberately in none of the orders being tested. */
+    eq(names(), ['Alpha', 'Bravo', 'Charlie'], 'the default is newest first');
     press('value');
-    const desc = names();
-    ok(JSON.stringify(desc) !== JSON.stringify(start), 'the first press reorders');
-    press('value'); press('value');
-    eq(names(), start, 'and the third press puts it back');
+    eq(names(), ['Alpha', 'Bravo', 'Charlie'], 'largest value first');
+    press('value');
+    eq(names(), ['Charlie', 'Bravo', 'Alpha'], 'reversed');
+    press('name');
+    eq(names(), ['Alpha', 'Bravo', 'Charlie'], 'a NAME column starts A–Z, not reversed');
+    press('name'); press('name');
+    eq(names(), ['Alpha', 'Bravo', 'Charlie'], 'and the third press is back to newest first');
     eq([...W.document.querySelectorAll('#entriesTable thead th[aria-sort]')].length, 0,
        'with no arrow left on any column');
   });

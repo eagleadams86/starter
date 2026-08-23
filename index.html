@@ -2321,8 +2321,21 @@ async function boot() {
 boot();
 
 /* The test harness reaches the `const` values through this; function
-   declarations it finds on window by itself. */
+   declarations it finds on window by itself.
+
+   `__plant` is the one hook that DOES something, and it exists because a suite
+   that reads the rendered DOM otherwise depends on whatever the browser it runs
+   in happens to hold. That is not hypothetical: five DOM tests passed on a
+   laptop with sample data saved and failed the moment CI ran them in a fresh
+   profile, where the app correctly boots into the welcome card and there is no
+   table to read. A suite must plant what it needs.
+
+   It replaces the state IN MEMORY and redraws — it never calls save(), because
+   this suite is read-only about storage and has to stay that way: it runs
+   against the reader's own copy of the app. */
 window.__starterTestHooks = {
+  __plant: function (next) { state = normalizeState(next); leaveWelcome(); render(); },
+  __state: function () { return state; },
   SCHEMA: SCHEMA, ID_RE: ID_RE, STORAGE_KEY: STORAGE_KEY, THEME_KEY: THEME_KEY,
   TAB_KEY: TAB_KEY, TABS: TABS, SHARE_FORMAT: SHARE_FORMAT, SHARE_PAYLOAD_V: SHARE_PAYLOAD_V,
   blankState: blankState, normalizeState: normalizeState, defaultSettings: defaultSettings,
