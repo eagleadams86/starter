@@ -1639,7 +1639,6 @@ function renderList() {
   const head = '<thead><tr>' + COLUMNS.map((c) => {
     /* aria-sort goes on the TH and names the direction; only the sorted column
        carries it, which is also what draws the arrow. */
-    const on = v.key === c.key && (sortKey || true);
     const aria = (sortKey === c.key)
       ? ' aria-sort="' + (v.dir === 'asc' ? 'ascending' : 'descending') + '"' : '';
     return '<th scope="col" class="sortable' + (c.num ? ' num' : '') + '"' + aria + '>'

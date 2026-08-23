@@ -324,8 +324,12 @@ function define() {
        'slate is Dark renamed — sending it to Auto would change what a reader sees');
   });
   t('the themes are listed alphabetically', () => {
+    /* One capture rather than two replaces. `.replace('"', '')` takes only the
+       FIRST quote — safe here, because the first replace has already eaten the
+       one in front, but CodeQL calls it (js/incomplete-sanitization) and it is
+       right that "safe because of what happens to be left" is not a reason. */
     const opts = (APP_SRC.match(/<option value="(auto|midnight|dark|light|sepia)"/g) || [])
-      .map(o => o.replace(/.*value="/, '').replace('"', ''));
+      .map(o => (o.match(/value="([^"]+)"/) || [])[1]);
     eq(opts, ['auto', 'dark', 'light', 'midnight', 'sepia'],
        'Auto is first because of the alphabet, not because it is the default');
   });
