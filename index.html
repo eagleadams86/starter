@@ -549,7 +549,31 @@
   input[type="password"] {
     font: inherit; width: 100%; background: var(--surface); color: var(--text-primary);
     border: 1px solid var(--input-border); border-radius: var(--radius-sm);
-    padding: var(--sp-3) var(--sp-4); min-height: var(--control-h);
+    padding: var(--sp-3) var(--sp-4);
+    /* MIN-HEIGHT, and the second half of it is not cosmetic. An
+       `<input type="date">` with NO VALUE renders no inner content in iOS
+       Safari, and the pack turns the native appearance off on date-ish types
+       (its rule 12) — so the content box has nothing to give it a height and
+       collapses to its padding: a thin empty bar beside a full-height field
+       next to it.
+
+       `max()` of the two floors, because they answer different questions and
+       both are wanted. `--control-h` is the family's control height and is what
+       a field shares with the button beside it; `calc(1.5em + 14px)` is the box
+       a FILLED field makes — 1.5em of line-height plus the --sp-3 padding twice
+       plus the two borders — and is the one that survives, because it is in `em`
+       and the other is not. The pack lifts every field to 16px on a coarse
+       pointer so iOS does not zoom the page, and a reader who raises their
+       browser font size moves the em figure too; a hard pixel floor goes wrong
+       in both directions. On the shared rule rather than on `input[type=date]`,
+       so a new field type inherits the guard.
+
+       NEITHER Chromium NOR desktop WebKit reproduces the collapse — Chromium
+       always paints "mm/dd/yyyy" and Playwright's WebKit draws its own box. It
+       is visible on a real iPhone and in the iOS Simulator, and nowhere else.
+       Found in PAPTrack 2026-08-22; the family was swept and fixed 2026-08-23,
+       and a new app inherits the guard from here. */
+    min-height: max(var(--control-h), calc(1.5em + 14px));
   }
   /* Chromium draws a native inset shape for search that ignores the border and
      the radius; appearance:none is what hands them back. It removes the native ×
