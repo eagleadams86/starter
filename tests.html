@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 102;
+const EXPECTED = 103;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -663,6 +663,24 @@ function define() {
   t('there is a skip link, and it goes to <main>', () => {
     ok(/<a class="skip" href="#main">/.test(APP_SRC));
     ok(/<main id="main"/.test(APP_SRC));
+  });
+
+  t('the page is one of the family\u2019s TWO widths', () => {
+    /* 1500px (Sprint Predictability, Flow Metrics, Golf Handicap, both lottery
+       pages) or 2400px (Money Map, PAPTrack, the dashboard). This file carried
+       1100 for a day, which made the shell the one page in the family at a width
+       nothing else uses — and every app copied from it would have inherited that.
+       A new app picks one of the two; it does not invent a third. */
+    const w = W.getComputedStyle(W.document.documentElement)
+      .getPropertyValue('--page-w').trim();
+    ok(w === '1500px' || w === '2400px', 'got ' + w);
+    /* .wrap and .headbar have to be the same number or the brand stops lining up
+       with the left edge of the first card — which is the whole reason it is a
+       token rather than two literals. */
+    const wrap = W.getComputedStyle(W.document.querySelector('.wrap')).maxWidth;
+    const bar = W.getComputedStyle(W.document.querySelector('.headbar')).maxWidth;
+    eq(wrap, bar, 'the content and the header row must share one width');
+    eq(wrap, w, 'and it must be the token, not a repeated literal');
   });
 
   group('two tabs, decided before first paint');

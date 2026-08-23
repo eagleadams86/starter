@@ -110,6 +110,12 @@ still reports "all 3 tests pass".
   are named for what they show. `Item 1 / Item 2` teaches nothing.
 - **Headings are Title Case**; body copy, buttons, table column headers and field labels are
   not. An icon never sits flush against the word it follows.
+- **There are TWO page widths in this family and a new app picks one.** 1500px is the default
+  and what this starts on; 2400px is the ultra-wide, for a page whose content genuinely fills
+  it. Don't invent a third — this file carried 1100 for a day, which made the shell the one
+  page in the family at a width nothing else uses, and every app copied from it would have
+  inherited that. `--page-w` is read by both `.wrap` and `.headbar`, and they have to be the
+  same number or the brand stops lining up with the left edge of the first card.
 - **A sortable heading is a BUTTON, not a `th` with a click handler.** It has to be reachable
   from a keyboard and announce itself as pressable, and `aria-sort` on the `th` is what tells
   a screen reader which way the column runs. Three states, not two: a two-state toggle gives

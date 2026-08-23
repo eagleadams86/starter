@@ -173,18 +173,30 @@
   }
 
   /* ── The app's own measurements ─────────────────────────────────────────────
-     Not colours, so not the pack's business. Two control heights, because a
-     native <select> ignores line-height and would otherwise sit shorter than a
-     button with identical padding; and one page width, which each app justifies
-     for itself — 1500 for the dense table apps, 1100 where a table goes gappy
-     stretched to it, 2400 for Money Map. --page-w is read by BOTH .wrap and
-     .headbar and they must stay the same number, or the brand stops lining up
-     with the left edge of the first card. That is the whole reason it is a token
-     rather than two literals. */
+     Not colours, so not the pack's business.
+
+     THERE ARE TWO PAGE WIDTHS IN THIS FAMILY AND A NEW APP PICKS ONE OF THEM.
+     1500px is the default and what this starts on — Sprint Predictability, Flow
+     Metrics, Golf Handicap and both lottery pages. 2400px is the ultra-wide, for
+     a page whose content genuinely fills it: Money Map's year-by-year grid,
+     PAPTrack, the dashboard. **Don't invent a third.** This file carried 1100
+     for a day, reasoning that a narrow table goes gappy stretched to 1500 — which
+     is a real effect and still the wrong answer, because it makes the shell the
+     one page in the family at a width nothing else uses. If a table looks sparse,
+     that is a fact about the table.
+
+     --page-w is read by BOTH .wrap and .headbar and they must stay the same
+     number, or the brand stops lining up with the left edge of the first card.
+     That is the whole reason it is a token rather than two literals — Sprint
+     Predictability and Flow Metrics both still write 1500px twice.
+
+     The two control heights are here because a native <select> ignores
+     line-height and would otherwise sit shorter than a button with identical
+     padding. */
   :root {
     --chrome-h: 30px;    /* the header row: utilities, not the page's action */
     --control-h: 38.5px; /* every button in the page body and in dialogs */
-    --page-w: 1100px;
+    --page-w: 1500px;    /* the family's default; 2400px is the ultra-wide */
   }
 
   * { box-sizing: border-box; }
