@@ -82,9 +82,11 @@ later:
 | `viewOnly` | one flag, checked in `save()` — the single write path |
 | the `storage` listener | adopts another tab's write, and never saves from inside it |
 
-**A test suite with a floor.** 118 tests pinning all of the above, and an `EXPECTED` constant
-so a test that goes *missing* fails the build — a suite that quietly shrank to three checks
-still reports "all 3 tests pass".
+**A test suite with a floor.** Every rule above is pinned by a test, and an `EXPECTED`
+constant means a test that goes *missing* fails the build — a suite that quietly shrank to
+three checks still reports "all 3 tests pass". The count lives in `tests.html` and the page
+prints it; this paragraph deliberately doesn't, because a number written here goes stale the
+next time a test is added and then quietly misreports what the suite covers.
 
 ## Things the comments will tell you that are worth knowing now
 
