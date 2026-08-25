@@ -955,6 +955,13 @@ function define() {
   });
   t('the worker is network-first, and caches only public files', () => {
     ok(/networkFirst/.test(SW_SRC), 'stale cached code reading moved data is the failure to avoid');
+    /* A bare `fetch(req)` keeps the cache mode of the request the page made, so an
+       ordinary reload is answered by the browser's own HTTP cache and a fresh deploy
+       goes unseen for its `max-age`. It was in all six workers from the day they
+       shipped, found on the task dashboard 2026-08-24. */
+    const swCode = stripComments(SW_SRC);
+    ok(/fetch\(req, \{ cache: 'no-cache' \}\)/.test(swCode) && !/fetch\(req\)/.test(swCode),
+       'the serving fetch must opt out of the HTTP cache, or network-first is a name only');
     ok(!/eval\(|importScripts|import\(/.test(SW_SRC),
        'the page’s CSP does not apply here — this code runs with none at all');
     eq(SW_SRC.match(/https?:\/\/[^\s'"]+/g) || [], [], 'and never fetches cross-origin');
