@@ -1155,6 +1155,23 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
 </header>
 
 <div class="wrap">
+<!-- <main> opens HERE, ABOVE the tab strip, not below it. Both halves of the
+     reason matter, and this shell had it wrong while every app it is copied from
+     had it right. A <main> that wraps the panel alone leaves the tab row in no
+     landmark at all — that is the half axe-core's `region` rule finds — AND it
+     puts the skip link PAST the tabs, so a keyboard user who takes the link has
+     the whole tab row behind them, reachable only by shift-tabbing back. That
+     second half is the one worth acting on. The tabs and the panel they drive
+     are one widget, so the landmark goes round both. The shared-view banner
+     comes with them: it describes what is on screen, so it is content rather
+     than furniture.
+
+     The tabpanel role still goes on the inner panels, NEVER on <main> itself —
+     putting a role ON an element IS its role, so role="tabpanel" here would
+     silently replace the main landmark and "skip to the main content" would stop
+     finding anything. -->
+<main id="main" tabindex="-1">
+
 <!-- The banner on somebody else's snapshot. -->
 <div class="viewbar no-print" id="viewbar" hidden></div>
 
@@ -1165,7 +1182,6 @@ footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
           aria-controls="entriesPanel" aria-selected="false" tabindex="-1">Entries</button>
 </div>
 
-<main id="main" tabindex="-1">
   <!-- ── The welcome card ─────────────────────────────────────────────────────
        Shown once, on a browser that has never saved anything. Every app in the
        family opens on Money Map's card: no tabs, no empty charts, three choices

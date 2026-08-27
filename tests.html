@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 120;
+const EXPECTED = 121;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -812,6 +812,31 @@ function define() {
   t('there is a skip link, and it goes to <main>', () => {
     ok(/<a class="skip" href="#main">/.test(APP_SRC));
     ok(/<main id="main"/.test(APP_SRC));
+  });
+  t('and <main> opens ABOVE the tab strip, so the skip link cannot jump past it', () => {
+    /* One rule with two halves, and this shell had it wrong while every app
+       copied from it had it right. A <main> that wraps the panel alone leaves
+       the tab row in no landmark at all — the half axe-core's `region` rule
+       finds — and lands the skip link PAST the tabs, so a keyboard user who
+       takes it has the whole row behind them, reachable only by shift-tabbing
+       back. That second half is the one worth acting on.
+
+       Asserted against the LIVE DOM, not the source: a regex over the file can
+       match two strings in the right order and still describe markup the parser
+       nests some other way, which is exactly the mistake being pinned. */
+    const main = W.document.getElementById('main');
+    ok(main && main.tagName === 'MAIN', 'the skip link\u2019s target is a real <main>');
+    const tabs = W.document.querySelector('[role="tablist"]');
+    ok(tabs, 'and there is a tab strip for it to contain');
+    ok(main.contains(tabs), 'the tab strip sits INSIDE the main landmark');
+    /* The shared-view banner travels with them: it describes what is on screen,
+       so it is content rather than furniture. */
+    ok(main.contains(W.document.getElementById('viewbar')),
+       'and so does the banner a shared snapshot puts above the tabs');
+    /* Putting a role ON an element IS its role. role="tabpanel" here would
+       silently replace the landmark and the skip link would find nothing. */
+    ok(!main.hasAttribute('role'),
+       'and no role has been written onto <main>, which would replace the landmark');
   });
 
   t('the page is one of the family\u2019s TWO widths', () => {
