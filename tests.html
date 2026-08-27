@@ -75,7 +75,18 @@ const bustFetch = (path) => fetch(path + BUST, { cache: 'no-store' });
 const TESTS = [];
 function group(name) { TESTS.push({ group: name }); }
 function t(name, fn) { TESTS.push({ name: name, fn: fn }); }
-function ok(cond, note) { if (!cond) throw new Error(note || 'expected truthy'); }
+/* `detail` is the value that FAILED, not more prose: `ok(w <= pin, 'it fits',
+   w + 'px')` says what was expected and then shows what was actually there.
+   Every suite in the family takes three arguments now (2026-08-26). It was two
+   here, and a call site passing a third had its diagnostic silently dropped —
+   the assertion still failed correctly, it just refused to say what it saw.
+   CodeQL's js/superfluous-trailing-arguments caught it three separate times in
+   one day, in three different repos, which is what settled the signature. */
+function ok(cond, note, detail) {
+  if (cond) return;
+  throw new Error((note || 'expected truthy')
+    + (detail === undefined ? '' : ' \u2014 got ' + detail));
+}
 function eq(actual, expected, note) {
   const a = JSON.stringify(actual), b = JSON.stringify(expected);
   if (a !== b) throw new Error((note ? note + ' — ' : '') + 'got ' + a + ', wanted ' + b);
