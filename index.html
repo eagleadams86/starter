@@ -2253,12 +2253,24 @@ function tableToRows(table) {
   return rows;
 }
 
-/* A real negative number is exempt: quoting `-5` would break the arithmetic
-   people export a CSV to do, while `-alpha` is still guarded. */
-const FORMULA_LEAD = /^[=+@]|^-(?![0-9.])/;
+/* A real number is exempt: quoting `-5` would break the arithmetic people
+   export a CSV to do, while `-alpha` is still guarded.
+
+   THE CARVE-OUT IS "IS THE WHOLE CELL A NUMBER?", not "does the lead look
+   numeric". This used to be a lookahead — `^-(?![0-9.])` — which asked only
+   whether the character after the sign was a digit, and so let `-3abc`, `-1+1`
+   and `-3+cmd|' /c calc'!A0` out undefused. The lead set is OWASP's full list
+   — `=` `+` `-` `@` TAB CR — because a cell opening with a tab or a carriage
+   return is the same attack wearing a coat, and neither can begin a number.
+
+   This is the family's one CSV rule: the same two lines are in Flow Metrics,
+   Golf Handicap, PAPTrack, Sprint Predictability and both lottery pages, and a
+   change to it belongs in all seven. */
+const FORMULA_LEAD = /^[=+@\-\t\r]/;
+const PLAIN_NUMBER = /^[+-]?[0-9]+(\.[0-9]+)?$/;
 function csvCell(v) {
   let str = String(v == null ? '' : v);
-  if (FORMULA_LEAD.test(str)) str = "'" + str;
+  if (FORMULA_LEAD.test(str) && !PLAIN_NUMBER.test(str)) str = "'" + str;
   /* Quote whenever the delimiter, a quote or a newline is in play — and note
      that toLocaleString groups thousands with a comma in most locales, so a
      four-figure value reaches here as "12,500" and MUST be quoted or the row
@@ -2267,9 +2279,21 @@ function csvCell(v) {
 }
 const toCsv = (rows) => rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
 /* TSV for the clipboard and CSV for the file, deliberately: a pasted CSV lands
-   as one column of text, and a file has to be a CSV to open as a spreadsheet. */
-const toTsv = (rows) => rows.map((r) => r.map((v) =>
-  String(v == null ? '' : v).replace(/[\t\n\r]/g, ' ')).join('\t')).join('\n');
+   as one column of text, and a file has to be a CSV to open as a spreadsheet.
+
+   THE SAME FORMULA GUARD, because the clipboard lands in the same spreadsheet
+   the file would have opened in — a paste is not a safer door than a download.
+   No quoting: the tabs and newlines are flattened to spaces on the way out, so
+   nothing here needs it, and quotes-in-clipboard-TSV is not a convention
+   anything agrees on. */
+const toTsv = (rows) => rows.map((r) => r.map((v) => {
+  /* Read the lead off the RAW value and flatten afterwards: a cell opening with
+     a tab is one of the leads, and flattening first would turn it into a space
+     and hide it from the test. */
+  const raw = String(v == null ? '' : v);
+  const str = raw.replace(/[\t\n\r]/g, ' ');
+  return (FORMULA_LEAD.test(raw) && !PLAIN_NUMBER.test(raw)) ? "'" + str : str;
+}).join('\t')).join('\n');
 
 /* Two routes, then a message. navigator.clipboard needs a secure context and, in
    several browsers, a permission or a trusted gesture; execCommand is deprecated
@@ -3392,7 +3416,7 @@ window.__starterTestHooks = {
   encodeShare: encodeShare, decodeShare: decodeShare, csvEntries: csvEntries, csvCell: csvCell,
   raisesKeyboard: raisesKeyboard, esc: esc, todayISO: todayISO, fmt: fmt,
   nextSort: nextSort, COLUMNS: COLUMNS, tableToRows: tableToRows, cellText: cellText,
-  toCsv: toCsv, toTsv: toTsv, FORMULA_LEAD: FORMULA_LEAD,
+  toCsv: toCsv, toTsv: toTsv, FORMULA_LEAD: FORMULA_LEAD, PLAIN_NUMBER: PLAIN_NUMBER,
   searchApp: searchApp, SEARCH_CAP: SEARCH_CAP,
 };
 </script>

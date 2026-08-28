@@ -62,7 +62,7 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 | **The info dot and the help window** | Two family-wide blocks, declared property by property and identical in all seven windows: a 16px outlined circled **i** (never a `?`) with a 24px tap target from an unpainted `::after`, and a window sized by its own text — `#helpBody` capped at 66 characters, `#helpDialog` at `width: fit-content` — which comes out at **666px with 624px of text** everywhere. One window for the whole app, filled from a `HELP` table by `data-help` key, dismissed with **Got It**. Copy the blocks; do not re-derive them |
 | **Find** | TWO, as Golf Handicap has: ⌕ in the header (⌘K) searches everything and jumps to the record; the box in the table narrows what you're looking at |
 | **Sortable columns** | Flow Metrics' three-state cycle — the column's own direction, reversed, then back to the table's own order |
-| **Copy / ⬇ CSV** | On the table, reading the RENDERED DOM so the export is what you're looking at; formula cells defused, thousands quoted |
+| **Copy / ⬇ CSV** | On the table, reading the RENDERED DOM so the export is what you're looking at; formula cells defused on BOTH routes — the clipboard lands in the same spreadsheet the file would have opened in — and thousands quoted |
 | **Settings** | A dialog of real settings that survive Start Again |
 | **Share** | `#share=` links, deflate-raw + base64url, a trimmed pure-function payload, and a read-only view that strips every edit surface |
 | **Back up** | The family's window, identical in all six apps — 700px on 18px padding, JSON, CSV with formula cells defused, and Start Again folded in behind a disclosure |
@@ -87,6 +87,16 @@ constant means a test that goes *missing* fails the build — a suite that quiet
 three checks still reports "all 3 tests pass". The count lives in `tests.html` and the page
 prints it; this paragraph deliberately doesn't, because a number written here goes stale the
 next time a test is added and then quietly misreports what the suite covers.
+
+**And a smoke test, because everything else here is a pure function.** Pinning the arithmetic
+and the boundaries leaves the largest part of the file — the render layer — never executed at
+all, so a throw inside a tab panel or a dialog would ship green. A coverage run over the
+family on 2026-08-27 measured exactly that: every `render*` function in every app sat at zero.
+The walk in `runAsync()` plants the sample data in memory, visits every tab, opens and closes
+every dialog and records anything the frame throws — then puts the fixture back, because the
+DOM tests below it were planted before it ran. It cannot tell a right figure from a wrong one;
+it is the difference between "the maths is right" and "the app runs", and it was verified by
+breaking a render on purpose and watching the suite go red where nothing else noticed.
 
 ## Things the comments will tell you that are worth knowing now
 

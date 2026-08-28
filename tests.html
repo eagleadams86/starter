@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 121;
+const EXPECTED = 127;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -193,6 +193,57 @@ function bootApp() {
    body stays a plain function that either throws or doesn't. */
 const asyncResults = {};
 async function runAsync() {
+  /* ── The render smoke test ────────────────────────────────────────────────
+     Everything else in this suite calls a pure function or reads the source as
+     text. That covers the arithmetic and the boundaries very well and leaves
+     the LARGEST part of the file — the render layer — never executed at all: a
+     coverage run over this suite on 2026-08-27 showed the tab panels, the
+     dialogs and the export windows all at zero. A throw inside any of them
+     would have shipped green, because nothing here had ever drawn a view.
+
+     So this walks the app the way a person does: plant the sample data, visit
+     every tab, open and close every dialog, and record anything the frame
+     throws while it happens. It is not a substitute for the assertions below —
+     it cannot tell a right figure from a wrong one — but it is the difference
+     between "the maths is right" and "the app runs".
+
+     THE VERDICT IS RECORDED HERE AND ASSERTED BELOW, like the share round-trip
+     under it, because a test body in this runner must be synchronous. `__plant`
+     replaces the state in memory and never calls save(), so this still leaves
+     the reader's own copy of the app alone. */
+  try {
+    const errs = [];
+    W.addEventListener('error', (e) => errs.push(String(e.message)));
+    W.addEventListener('unhandledrejection', (e) => errs.push('unhandled rejection: ' + e.reason));
+    const drawn = {};
+    H.__plant({ entries: H.sampleData(), settings: H.defaultSettings() });
+    const doc = W.document;
+    for (const tab of H.TABS) {
+      const btn = doc.getElementById('tab-' + tab);
+      if (!btn) { errs.push('no tab button for ' + tab); continue; }
+      btn.click();
+      const panel = doc.getElementById(btn.getAttribute('aria-controls'));
+      /* A panel that drew nothing is the failure this is really looking for: a
+         render that threw half way leaves an element that is present and
+         empty, which no "did it throw" check on its own would notice. */
+      drawn['tab:' + tab] = panel ? panel.textContent.trim().length : 0;
+    }
+    doc.getElementById('tab-' + H.TABS[0]).click();
+    const dialogs = [...doc.querySelectorAll('dialog')].filter((d) => d.id);
+    for (const d of dialogs) {
+      try { d.showModal(); drawn['dialog:' + d.id] = d.textContent.trim().length; d.close(); }
+      catch (e) { errs.push('dialog ' + d.id + ': ' + e.message); }
+    }
+    asyncResults.smoke = { errs: errs, drawn: drawn, dialogs: dialogs.length };
+  } catch (e) { asyncResults.smoke = { errs: ['the walk itself threw: ' + e.message], drawn: {}, dialogs: 0 }; }
+  /* PUT THE FIXTURE BACK. define() plants it and switches to Entries at
+     definition time, which is BEFORE this runs, and every DOM test below reads
+     the app in that state — so a walk that left the sample data in place would
+     hand them seven rows where they expect three. Outside the try/catch on
+     purpose: if the walk fell over, the tests after it still need their fixture
+     rather than whatever the walk was holding when it stopped. */
+  try { H.__plant(FIXTURE); W.setTab('entries'); } catch (e) { /* reported by the walk's own verdict */ }
+
   try {
     const payload = H.buildSharePayload({
       entries: [{ id: 'a1', name: 'Round trip', value: -12.5, date: '2026-01-02' }],
@@ -594,10 +645,62 @@ function define() {
     eq(c.latest, null);
   });
 
+  /* ── The render smoke test ────────────────────────────────────────────────
+     The walk itself is in runAsync(); these read its verdict. See the note there
+     for why the suite needed one at all. */
+  group('the app actually runs — every tab drawn, every dialog opened');
+  t('nothing threw while the app was walked', () => {
+    const s = asyncResults.smoke;
+    ok(s, 'the smoke walk did not record a verdict at all');
+    eq(s.errs.length, 0, 'the frame threw during the walk', s.errs.join(' | '));
+  });
+  t('every tab drew something', () => {
+    const s = asyncResults.smoke;
+    H.TABS.forEach((tab) => {
+      const n = s.drawn['tab:' + tab];
+      ok(n > 0, 'the ' + tab + ' panel rendered no text — a render that threw half way '
+        + 'leaves an element that is present and empty', n);
+    });
+  });
+  t('every dialog opened, and had something in it', () => {
+    const s = asyncResults.smoke;
+    ok(s.dialogs >= 5, 'the app should carry the family windows', s.dialogs);
+    Object.keys(s.drawn).filter((k) => k.indexOf('dialog:') === 0).forEach((k) => {
+      ok(s.drawn[k] > 0, k + ' opened empty', s.drawn[k]);
+    });
+  });
+
   group('a CSV is a file that LEAVES the app');
   t('a cell that could be read as a formula is defused', () => {
     ok(H.csvCell('=SUM(A1:A9)').indexOf("'=") > -1, 'a leading = is a formula to Excel, Numbers and Sheets');
     ['+', '-', '@'].forEach(ch => ok(H.csvCell(ch + 'x').indexOf("'" + ch) > -1, ch + ' too'));
+    /* TAB and CR ride in the lead set beside the four printable characters: a
+       reader that strips the whitespace finds the formula underneath. */
+    ok(H.csvCell('\tHYPERLINK(x)').indexOf("'\t") > -1, 'a leading tab too');
+    eq(H.csvCell('\rcmd'), '"\'\rcmd"', 'and a carriage return, quoted because it is one');
+  });
+  /* The carve-out asks whether the WHOLE cell is a number, never whether the
+     character after the sign is a digit. The lookahead this replaced let all
+     three of these straight out of the app. */
+  t('a cell that merely STARTS like a number is not one', () => {
+    eq(H.csvCell('-3abc'), "'-3abc", 'which the old lookahead let past');
+    eq(H.csvCell('-1+1'), "'-1+1", 'a sum is not a number');
+    eq(H.csvCell("-3+cmd|' /c calc'!A0"), "'-3+cmd|' /c calc'!A0", 'nor is a DDE payload');
+  });
+  t('but a real number goes through, or the arithmetic breaks', () => {
+    eq(H.csvCell('-5'), '-5', 'quoting a negative would hand the spreadsheet text');
+    eq(H.csvCell('-0.5'), '-0.5');
+    eq(H.csvCell('+4.3'), '+4.3', 'a signed positive number is a number too');
+  });
+  /* The clipboard lands in the same spreadsheet the file would have opened in,
+     so it is not the safer door. This carried no guard at all until 2026-08-27
+     — the CSV had one and the TSV beside it did not — which is exactly the kind
+     of gap a template repeats into every app copied from it. */
+  t('the clipboard flavour carries the same guard as the file', () => {
+    eq(H.toTsv([['=1+1']]), "'=1+1", 'a formula pasted is a formula run');
+    eq(H.toTsv([['-3abc']]), "'-3abc", 'the whole-cell rule applies here too');
+    eq(H.toTsv([['-5']]), '-5', 'and a real number still goes through');
+    eq(H.toTsv([['a', 'b']]), 'a\tb', 'a pasted CSV would land as one column of text');
   });
   t('quotes and commas are escaped, RFC 4180 style', () => {
     eq(H.csvCell('a"b'), '"a""b"');
