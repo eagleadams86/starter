@@ -24,7 +24,9 @@ the first port past the family's dev band — every existing repo already owns o
    brand line, `manifest.webmanifest` and `NOTICE`.
 4. The mark: edit the geometry in `make_icons.py`, re-run it, and copy the same shapes into
    the inline SVG in `<head>` so the two stay one picture.
-5. Its own `CLAUDE.md`, recording the decisions this app makes that the family doesn't.
+5. `CLAUDE.md` — the one here is about maintaining the starter itself and is wrong for
+   your app the moment you copy it. Replace it with the new app's own, recording the
+   decisions this app makes that the family doesn't.
 
 `theme.css` here is a real copy of the pack's, byte-for-byte, not a link. When the palette
 moves, `check_consumers.py` in the pack is what notices this repo is behind.
