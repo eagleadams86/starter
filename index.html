@@ -1915,9 +1915,10 @@ function renderViewbar() {
   });
 }
 
-/* EXACTLY FIVE TILES — the grid spans in the stylesheet assume it. The fifth is
-   the one that goes full width on a phone, so the value that is not a short
-   number belongs there. */
+/* ANY COUNT FROM TWO TO EIGHT — the container queries in the stylesheet lay the
+   row out by counting the children, so editing this array is the whole edit.
+   (The hand-counted grid that assumed exactly five tiles is gone; tests.html
+   pins that no rule counts a tile by position any more.) */
 function renderStats(c) {
   const tiles = [
     ['Entries', String(c.count)],
@@ -3269,7 +3270,7 @@ function openMaxi() {
      header is NOT inside .wrap, so it stays reachable — which is the point. */
   document.querySelector('.wrap').inert = true;
   dressMaxiBtn();
-  /* No redraw here: the box just changed, so the ResizeObserver above draws it
+  /* No redraw here: the box just changed, so the ResizeObserver below draws it
      once. Doing it from both places drew the same chart twice on every open. */
   if (maxiHeaderWatch) maxiHeaderWatch.observe(document.querySelector('header'));
   card.querySelector('.chart-max').focus();
@@ -3358,8 +3359,8 @@ const maxiHeaderWatch = ('ResizeObserver' in window) ? new ResizeObserver(() => 
 })();
 
 /* Escape closes — unless a dialog is open on top of it, in which case Escape
-   belongs to the dialog. The ? help sheet pressed on a maximised chart is
-   exactly that case. */
+   belongs to the dialog. The chart's info-dot help window opened over a
+   maximised chart is exactly that case. */
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !maxiUp) return;
   if (document.querySelector('dialog[open]')) return;

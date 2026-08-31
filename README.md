@@ -8,10 +8,12 @@ in this family took two years to grow. Copy it, replace the middle, keep the edg
 ```bash
 git clone --depth 1 https://github.com/eagleadams86/starter ~/claude-newapp
 cd ~/claude-newapp && rm -rf .git && git init
-python3 -m http.server 8020
+python3 -m http.server 8024
 ```
 
-Then open `http://localhost:8020/` for the app and `/tests.html` for the suite.
+Then open `http://localhost:8024/` for the app and `/tests.html` for the suite. (8024 is
+the first port past the family's dev band — every existing repo already owns one of
+8010–8023, so a new app takes the next free number and records it in `.claude/launch.json`.)
 
 **What to change first**, in roughly this order:
 

@@ -1491,10 +1491,10 @@ function define() {
        list checked by a hand-written test agrees with itself forever. Both of
        those bit on 2026-08-23 — the lottery portfolio's help window had no
        handler at all and Money Map's compare window was simply left off the list.
-       Far outside rather than a few pixels: the app runs in a 1px frame here, so
-       the dialog's box is degenerate and only an unambiguous point is safe. What
-       this cannot check at 1px is the padding case — a click just INSIDE the
-       frame must NOT close it — so that one is verified by hand in a browser. */
+       Far outside rather than a few pixels: (-1000,-1000) is outside ANY
+       dialog's box whatever size the 1000x800 frame gives it, so the point is
+       unambiguous. The padding case — a click just INSIDE a dialog's own edge
+       must NOT close it — is still verified by hand in a browser. */
     const EXEMPT = ['syncChoiceDialog'];
     const dialogs = [...W.document.querySelectorAll('dialog')];
     ok(dialogs.length >= 2, 'the dialogs were found — ' + dialogs.length);
