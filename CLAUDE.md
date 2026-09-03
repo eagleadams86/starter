@@ -49,6 +49,18 @@ break one app, it ships silently inside every app that hasn't been started yet.
 - The CSP comment on `form-action 'self'` describes future code, not present
   code (the dialogs here use plain buttons). It stays as guidance for apps
   built from the template.
+- **The full-screen chart has no step arrows, and that is deliberate** (decided
+  2026-09-03). Flow Metrics grew a `‹ ›` pair beside the ⤢ that walks the charts
+  on the screen the card came from; it was ported the same day to the Lottery
+  Portfolio, Sprint Predictability and Money Map. **This template draws one
+  chart, so there is nothing to walk** — everywhere else the arrows hide
+  themselves below two charts, and here they would be hidden always. The
+  template's `openMaxi`/`closeMaxi` are written around a single `#chartCard` (a
+  `maxiUp` boolean, not a card reference), so an app built from this that grows
+  a second chart takes BOTH the card-based shape and the walk from Flow Metrics:
+  `maxiGroup()` + `dressStepBtns()` + `maxiStep()`, with the arrows in the
+  OVERLAY — a button inside the card is detached mid-step and takes the
+  keyboard's focus to `<body>` with it.
 - Security baseline is the global one and non-negotiable: CSP on every page,
   no third-party scripts ever, escape at every render, sanitize at every
   entry, `SCHEMA` halt at all four entry points, service-worker fetches with
