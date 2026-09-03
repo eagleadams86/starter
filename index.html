@@ -605,9 +605,16 @@
   @media (max-width: 640px) { #chartMaxi { padding: 10px; } }
   /* The card fills what is left and the chart fills the card. min-height:0 is
      what lets a flex child actually shrink rather than pushing the card past the
-     bottom of the window. */
+     bottom of the window; min-width:0 is the same word for the other axis. The
+     overlay is a flex ROW, so without it the card's automatic minimum size is
+     its MIN-CONTENT width — and a Chart.js canvas carries a width in its own
+     style attribute, so a card that arrives remembering a wider box keeps it and
+     hangs over the padding, taking the ⤢ with it. Money Map and Sprint
+     Predictability both did that on 2026-09-03. One chart here means nothing to
+     step onto, so this is the word an app copying this file should already
+     have. */
   #chartMaxi > .card { flex: 1 1 auto; display: flex; flex-direction: column;
-                       min-height: 0; width: auto; margin: 0; }
+                       min-height: 0; min-width: 0; width: auto; margin: 0; }
   /* height:auto undoes the 300px; min-height:0 is what lets a flex child actually
      shrink inside its parent rather than pushing the card past the window. */
   #chartMaxi > .card > .chart-wrap { flex: 1 1 auto; height: auto; min-height: 0; }
