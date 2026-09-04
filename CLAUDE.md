@@ -32,7 +32,7 @@ break one app, it ships silently inside every app that hasn't been started yet.
 - **README.md is part of the product.** It is the first thing a copier reads
   and it makes checkable claims (ports, key names, feature lists, the
   what-to-change-first list). Keep it in lockstep with the code, same commit.
-- The suite pins `EXPECTED` (129 as of 2026-09-04) — bump it when adding a
+- The suite pins `EXPECTED` (131 as of 2026-09-04) — bump it when adding a
   test; removing one fails the build on purpose. Tests refuse to run off
   localhost.
 - **This repo's own dev port is 8022** (`.claude/launch.json`). The 8024 in
@@ -99,3 +99,25 @@ the same faults were found here. Each fix has its own test in the
   nothing to go to, so the window stays open. Nothing else about the box
   changed. **Both listeners are part of the pattern** — an app copied from here
   that takes only `input` ships a search box that ignores its own return key.
+- **After a hit, the keyboard lands somewhere visible (fix 2 — the other half of
+  the same family fix).** Closing a dialog hands the focus back to whatever held
+  it before, so a ⌘K pressed from nowhere in particular dropped it on `<body>`.
+  In THIS app every hit carries an `id`, so the fault only shows on the one path
+  through `goToSearchHit()` that opens no editor: **a shared view**, where there
+  is no editor to catch the focus. `goToSearchHit()` now ends by reading
+  `document.activeElement` AFTER `render()` — `<body>`, null, or an element with
+  no client rects (markup the render threw away) goes onto
+  `.tab[data-tab=<the data-tab setTab just wrote>]` with `{ preventScroll: true }`.
+  Read the landing off the attribute, not off `h.view`: `setTab()` clamps a name
+  it does not know, so the attribute is the only answer that cannot be wrong.
+  **The rule is "leave a visible focus alone", not "always focus the tab"** —
+  that single sentence is what keeps the entry editor's `f_name` after a hit that
+  opens it, and the Find button after a real press on it, with no special case
+  for either. Copy the rule, not just the four lines.
+- **Testing a shared view needs a SECOND frame** (`bootShared()` in tests.html).
+  `viewOnly` is decided from the URL before anything renders and there is no hook
+  that flips it, on purpose — a flag a test can set is a flag a bug can set — so
+  the suite boots the real app at a real `#share=` link and polls for the
+  snapshot banner, because `load` fires before `boot()` has awaited
+  `decodeShare()`. An app copied from here that grows a view with no editor
+  behind it takes this helper too.

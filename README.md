@@ -190,6 +190,13 @@ breaking a render on purpose and watching the suite go red where nothing else no
   `goToSearchHit()` call a click on the first hit makes. With nothing matching there is
   nothing to go to and the window stays open. Copy both listeners; an app that takes only the
   `input` one ships a search box that ignores its own return key.
+- **After a hit, the keyboard lands somewhere the reader can see.** Closing a dialog hands the
+  focus back to whatever held it before, so a ⌘K pressed from nowhere in particular dropped it
+  on `<body>`. `goToSearchHit()` now ends by reading `document.activeElement`: a focus on
+  nothing visible — `<body>`, or an element this render threw away — moves to the tab of the
+  view the hit landed on, with `{ preventScroll: true }`. **A focus that is already visible is
+  left alone**, which is what keeps the entry editor's own first field after a hit that opens
+  it, and the *Find* button after a real press on it, with no special case for either.
 - **The Find window's CSS block is the family's, verbatim.** 700px on 18px of padding, and
   every property of what it shows — the heading, the intro line, the box, the hit and its
   three lines, the "Nothing matches" line — declared inside that block rather than borrowed

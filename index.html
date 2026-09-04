@@ -2268,6 +2268,32 @@ function goToSearchHit(h) {
   /* The record found is the record on screen. Not in a shared view, where there
      is no editor to open and every write surface has already been taken away. */
   if (h.id && !viewOnly) openEntry(h.id);
+  /* WHERE THE KEYBOARD IS AFTERWARDS (2026-09-04). The rule, and it is worth
+     copying whole: A FOCUS THAT IS ALREADY VISIBLE IS LEFT ALONE; only a focus
+     on nothing the reader can see is moved, and it goes to the tab of the view
+     the hit landed on.
+
+     Closing a dialog hands the focus back to whatever held it before, so after
+     a ⌘K pressed from nowhere in particular that is <body> — and every hit
+     above that opens no editor (a shared snapshot has none) dropped the
+     keyboard there, so the reader's next Tab started at the top of the page
+     instead of where the hit had taken them.
+
+     "Already visible" is what makes the two good cases work without a special
+     case for either: a hit that opened the editor keeps the editor's own first
+     field, and a Find button pressed with the mouse keeps the button. An
+     element with no client rects counts as invisible — that is markup this
+     render() has just thrown away, still holding the focus.
+
+     Read the landing off `data-tab` rather than `h.view`: setTab() has just had
+     the last word on which tab is showing, and it clamps a name it doesn't
+     know. `preventScroll` because the reader is already looking at the record —
+     jumping the page back up to the tab row would undo the hit. */
+  const had = document.activeElement;
+  const landing = document.querySelector('.tab[data-tab="'
+    + document.documentElement.getAttribute('data-tab') + '"]');
+  if (landing && (!had || had === document.body || !had.getClientRects().length))
+    landing.focus({ preventScroll: true });
 }
 
 /* The listeners for all of this are registered in the Wiring section below,

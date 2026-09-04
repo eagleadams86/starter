@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 129;
+const EXPECTED = 131;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -189,6 +189,43 @@ function bootApp() {
   });
 }
 
+/* ── A SECOND frame, booted as somebody else's snapshot ──────────────────────
+   The only honest way to test a shared view: `viewOnly` is decided from the
+   URL before anything renders and there is no hook that flips it, deliberately
+   — a flag a test can set is a flag a bug can set. So this boots the real app
+   at a real '#share=' link, exactly as a reader opening one does.
+
+   `load` fires before boot() has finished, because boot() awaits decodeShare(),
+   so the poll waits for the shared-snapshot banner: renderViewbar() unhides it
+   inside render(), which is the last thing boot() does. */
+function bootShared(token) {
+  return new Promise((resolve, reject) => {
+    const frame = document.createElement('iframe');
+    frame.title = 'app under test, as a shared snapshot';
+    frame.setAttribute('aria-hidden', 'true');
+    frame.setAttribute('data-starter-tests', '');
+    frame.style.cssText = 'position:absolute;width:1000px;height:800px;left:-9999px;top:0';
+    frame.src = 'index.html' + BUST + '#share=' + token;
+    document.body.appendChild(frame);
+    const started = Date.now();
+    const poll = () => {
+      let win = null, ready = false;
+      try {
+        win = frame.contentWindow;
+        const bar = win.document.getElementById('viewbar');
+        ready = !!(win.starterViewOnly && bar && !bar.hidden);
+      } catch (e) { /* not readable yet */ }
+      if (ready) { resolve(win); return; }
+      if (Date.now() - started > 15000) {
+        reject(new Error('the shared frame never finished booting — did decodeShare() throw?'));
+        return;
+      }
+      setTimeout(poll, 40);
+    };
+    poll();
+  });
+}
+
 /* The two async checks are run up front and their VERDICTS recorded, so a test
    body stays a plain function that either throws or doesn't. */
 const asyncResults = {};
@@ -264,6 +301,55 @@ async function runAsync() {
     await H.decodeShare(future);
     asyncResults.newer = { thrown: false };
   } catch (e) { asyncResults.newer = { thrown: true, flagged: !!e.newerVersion }; }
+
+  /* ── Where the keyboard is after a Find hit in a SHARED view ───────────────
+     The one path through goToSearchHit() that opens no editor: a shared
+     snapshot has no editor to open. Driven in a second frame booted at a real
+     '#share=' link, with Find opened the way ⌘K opens it — findBtn.click(),
+     not a press on the button — so nothing visible holds the focus first. That
+     is the case the fix is for; the "already visible, leave it alone" cases are
+     tested in the main frame, synchronously, below. */
+  try {
+    const S = await bootShared(await H.encodeShare(H.buildSharePayload({
+      entries: [{ id: 'sh-1', name: 'Shared row', value: 10, date: '2026-04-01' }],
+      settings: H.defaultSettings(),
+    })));
+    const SD = S.document;
+    SD.getElementById('tab-overview').click();       /* start on the OTHER tab */
+    if (SD.activeElement && SD.activeElement.blur) SD.activeElement.blur();
+    SD.getElementById('findBtn').click();
+    const box = SD.getElementById('searchBox');
+    box.value = 'Shared';
+    box.dispatchEvent(new S.Event('input', { bubbles: true }));
+    const hits = SD.querySelectorAll('#searchResults .hit').length;
+    if (SD.activeElement && SD.activeElement.blur) SD.activeElement.blur();
+    const before = SD.activeElement ? (SD.activeElement.id || SD.activeElement.tagName) : 'null';
+    SD.querySelector('#searchResults .hit').click();
+    const a = SD.activeElement;
+    asyncResults.sharedFind = {
+      hits: hits, before: before,
+      findOpen: SD.getElementById('searchDialog').open,
+      editorOpen: SD.getElementById('entryDialog').open,
+      tab: S.document.documentElement.getAttribute('data-tab'),
+      where: a ? (a.id || a.tagName) : 'null',
+      isTab: !!(a && a.classList && a.classList.contains('tab')),
+      selected: a ? a.getAttribute('aria-selected') : null,
+      forTab: a && a.dataset ? a.dataset.tab : null,
+      visible: !!(a && a.getClientRects && a.getClientRects().length),
+    };
+    /* And the other half of the rule, in the only frame that can show it: a
+       REAL press on the Find button leaves the focus on the button, the
+       window's close hands it back, and that is somewhere the reader can see —
+       so it is left exactly where it is. */
+    const fb = SD.getElementById('findBtn');
+    fb.focus();
+    fb.click();
+    box.value = 'Shared';
+    box.dispatchEvent(new S.Event('input', { bubbles: true }));
+    SD.querySelector('#searchResults .hit').click();
+    asyncResults.sharedFind.afterRealPress =
+      SD.activeElement ? (SD.activeElement.id || SD.activeElement.tagName) : 'null';
+  } catch (e) { asyncResults.sharedFind = { error: e.message }; }
 }
 
 /* ── The suite plants what it needs, and never trusts what it finds ──────────
@@ -1283,6 +1369,53 @@ function define() {
     ok(D.getElementById('entryDialog').open, 'and the entry it found is open for editing');
     eq(D.getElementById('f_name').value, 'Alpha thousands', 'the right entry');
     D.getElementById('entryDialog').close();
+    W.setTab('entries');
+  });
+  t('a hit that opens no editor lands the keyboard on the tab of the view it went to', () => {
+    /* The shared-view frame's verdict, recorded in runAsync(). Closing the Find
+       window hands the focus back to whatever had it before — and after a ⌘K
+       pressed from nowhere in particular that is <body>. In a shared snapshot
+       there is no editor to catch it, so before 2026-09-04 the keyboard was
+       simply dropped on the page and the next Tab started from the top. */
+    const r = asyncResults.sharedFind || {};
+    ok(!r.error, 'the shared-view walk itself threw', r.error);
+    eq(r.hits, 1, 'the shared snapshot has one matching row to go to');
+    eq(r.before, 'BODY', 'nothing visible held the focus when the hit was clicked');
+    ok(!r.findOpen, 'the hit closed the Find window');
+    ok(!r.editorOpen, 'and opened no editor — there is none in somebody else’s snapshot');
+    eq(r.tab, 'entries', 'the hit moved the app from Overview to Entries');
+    ok(r.isTab && r.visible, 'the keyboard is on a visible tab, not on <body>', r.where);
+    eq(r.forTab, 'entries', 'the tab of the view the hit landed on');
+    eq(r.selected, 'true', 'and it is the tab now showing');
+  });
+  t('a focus that is already visible is left alone', () => {
+    /* The other half of the same rule, and the reason it is written as "repair
+       nothing the reader can see" rather than "always focus the tab": a hit
+       that opens the entry editor must keep the editor's own focus, and a Find
+       button pressed with the mouse must keep the button's. */
+    const D = W.document;
+    const type = (q) => {
+      const box = D.getElementById('searchBox');
+      box.value = q;
+      box.dispatchEvent(new W.Event('input', { bubbles: true }));
+    };
+    const where = () => (D.activeElement ? (D.activeElement.id || D.activeElement.tagName) : 'null');
+    D.getElementById('entryDialog').close();
+    D.getElementById('searchDialog').close();
+    if (D.activeElement && D.activeElement.blur) D.activeElement.blur();
+    D.getElementById('findBtn').click();
+    type('Alpha');
+    D.querySelector('#searchResults .hit').click();
+    ok(D.getElementById('entryDialog').open, 'the hit opened the editor');
+    eq(where(), 'f_name', 'and the editor’s first field keeps the keyboard — nothing to repair');
+    D.getElementById('entryDialog').close();
+    /* And the button: a REAL press on Find leaves the focus on it, the window's
+       close hands it back, and being visible it stays there. Only the shared
+       frame can show that, because every hit here opens an editor that takes
+       the keyboard first — recorded in runAsync() beside the case above. */
+    const r = asyncResults.sharedFind || {};
+    eq(r.afterRealPress, 'findBtn',
+       'the Find button that had the focus keeps it — there is nothing to repair');
     W.setTab('entries');
   });
 
