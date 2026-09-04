@@ -64,7 +64,7 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 | **A chart** | SVG, so it follows a theme change *and* the print palette for free. Tint fill + full-strength edge (pack rule 3), `--series-*` only (rule 4). Drawn at the box's own pixel size and redrawn when it changes, so nothing is ever scaled |
 | **A chart card** | The siblings' anatomy: name, an info dot, a sentence saying what is plotted, a 300px box, and a button that lifts the chart out to fill the window (Escape, the button again, or a click outside) |
 | **The info dot and the help window** | Two family-wide blocks, declared property by property and identical in all seven windows: a 16px outlined circled **i** (never a `?`) with a 24px tap target from an unpainted `::after`, and a window sized by its own text — `#helpBody` capped at 66 characters, `#helpDialog` at `width: fit-content` — which comes out at **666px with 624px of text** everywhere. One window for the whole app, filled from a `HELP` table by `data-help` key, dismissed with **Got It**. Copy the blocks; do not re-derive them |
-| **Find** | TWO, as Golf Handicap has: ⌕ in the header (⌘K) searches everything and jumps to the record; the box in the table narrows what you're looking at |
+| **Find** | TWO, as Golf Handicap has: ⌕ in the header (⌘K) searches everything and jumps to the record — click a result or press Enter for the top one; the box in the table narrows what you're looking at |
 | **Sortable columns** | Flow Metrics' three-state cycle — the column's own direction, reversed, then back to the table's own order |
 | **Copy / ⬇ CSV** | On the table, reading the RENDERED DOM so the export is what you're looking at; formula cells defused on BOTH routes — the clipboard lands in the same spreadsheet the file would have opened in — and thousands quoted |
 | **Settings** | A dialog of real settings that survive Start Again |
@@ -185,6 +185,11 @@ breaking a render on purpose and watching the suite go red where nothing else no
 - **Find needs two characters.** One matches most of the data, and that list is worse than no
   list; the placeholder and the empty message both say so. The cap reports what it dropped
   rather than truncating silently.
+- **Enter opens the first hit.** Enter is the one key a search box teaches, so the box carries
+  a `keydown` listener as well as its `input` one and a plain Enter makes the same
+  `goToSearchHit()` call a click on the first hit makes. With nothing matching there is
+  nothing to go to and the window stays open. Copy both listeners; an app that takes only the
+  `input` one ships a search box that ignores its own return key.
 - **The Find window's CSS block is the family's, verbatim.** 700px on 18px of padding, and
   every property of what it shows — the heading, the intro line, the box, the hit and its
   three lines, the "Nothing matches" line — declared inside that block rather than borrowed

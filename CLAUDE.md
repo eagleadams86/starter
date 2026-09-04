@@ -32,7 +32,7 @@ break one app, it ships silently inside every app that hasn't been started yet.
 - **README.md is part of the product.** It is the first thing a copier reads
   and it makes checkable claims (ports, key names, feature lists, the
   what-to-change-first list). Keep it in lockstep with the code, same commit.
-- The suite pins `EXPECTED` (127 as of 2026-08-31) — bump it when adding a
+- The suite pins `EXPECTED` (129 as of 2026-09-04) — bump it when adding a
   test; removing one fails the build on purpose. Tests refuse to run off
   localhost.
 - **This repo's own dev port is 8022** (`.claude/launch.json`). The 8024 in
@@ -81,3 +81,21 @@ break one app, it ships silently inside every app that hasn't been started yet.
   no third-party scripts ever, escape at every render, sanitize at every
   entry, `SCHEMA` halt at all four entry points, service-worker fetches with
   `cache: 'no-cache'`.
+
+## Fixes From the 2026-09-03 Audit
+
+The family's Find window (⌘K) was audited across every repo that carries it and
+the same faults were found here. Each fix has its own test in the
+`find — one search across everything` group.
+
+- **Enter opens the first hit (fix 1 — the family fix, and it landed the same
+  day in Sprint Predictability 8637323, Money Map and Flow Metrics).** The only
+  listener on `#searchBox` was the `input` one, so Enter — the one key a search
+  box teaches — did nothing at all and a reader had to Tab out of the box and
+  down the list. A `keydown` listener now opens `searchHits[0]` through
+  `goToSearchHit()`: deliberately the SAME call a click on that hit makes, so
+  the two paths cannot drift. A plain Enter only (a modifier means the reader is
+  asking the browser for something else), and with nothing matching there is
+  nothing to go to, so the window stays open. Nothing else about the box
+  changed. **Both listeners are part of the pattern** — an app copied from here
+  that takes only `input` ships a search box that ignores its own return key.

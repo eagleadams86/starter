@@ -3096,6 +3096,21 @@ $('findBtn').addEventListener('click', () => {
   $('searchBox').focus();
 });
 $('searchBox').addEventListener('input', renderSearchResults);
+/* ENTER OPENS THE FIRST HIT (2026-09-04). That is the rule, and it is the whole
+   reason this listener exists: Enter is the one key a search box teaches, and
+   for a while the ONLY listener on this box was the `input` one above, so
+   pressing it did nothing and a reader had to Tab out of the box and down the
+   list. A plain Enter only — a modifier means the reader is asking the browser
+   for something else — and it makes the very same goToSearchHit() call a click
+   on that first hit makes, so the two paths can never drift apart. With nothing
+   matching there is nothing to go to, so the window simply stays open. Nothing
+   else about the box changes. Sprint Predictability's 8637323 is the model, and
+   every app in the family now behaves this way. */
+$('searchBox').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  e.preventDefault();
+  if (searchHits[0]) goToSearchHit(searchHits[0]);
+});
 $('searchResults').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-hit]');
   if (btn && searchHits[+btn.dataset.hit]) goToSearchHit(searchHits[+btn.dataset.hit]);
