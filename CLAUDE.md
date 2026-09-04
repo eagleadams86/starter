@@ -49,6 +49,22 @@ break one app, it ships silently inside every app that hasn't been started yet.
 - The CSP comment on `form-action 'self'` describes future code, not present
   code (the dialogs here use plain buttons). It stays as guidance for apps
   built from the template.
+- **The bars sit at the SOLID tint strength, and the hover is full strength**
+  (2026-09-03). Pack rule 3: a bar is a tint fill plus a full-strength edge, and
+  a *solid, untextured* series keeps ~55% of its colour where a textured one may
+  go to 32%, because the texture puts full strength back over part of the bar and
+  an outline alone cannot. These bars carry no texture. They sat at 32% anyway
+  until a family-wide survey caught it: that bought `.bar.on` a place to stand —
+  the highlight was the 55% the resting fill now uses — and cost the resting bars
+  the contrast the rule exists to protect, most visibly on the white Light card.
+  **The two levels are a pair. Raising one without the other silently deletes the
+  highlight**, so both are pinned by tests, and so is the legend swatch, which
+  carries the bar's own numbers because a key that does not depict its mark is
+  worse than no key. The hover went to the colour itself — Money Map's Spending
+  chart's answer to the same squeeze, not a new idea. The swatch stays a tint
+  rather than going solid: the pack's carve-out is about swatches that must be
+  told apart from EACH OTHER, and there are two here under edges that are most of
+  a 22×10 box, where Money Map's five-account key needed the full-strength fill.
 - **The full-screen chart has no step arrows, and that is deliberate** (decided
   2026-09-03). Flow Metrics grew a `‹ ›` pair beside the ⤢ that walks the charts
   on the screen the card came from; it was ported the same day to the Lottery

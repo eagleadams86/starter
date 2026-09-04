@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 127;
+const EXPECTED = 128;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -378,9 +378,41 @@ function define() {
   t('a bar is a tint fill plus a full-strength edge — pack rule 3', () => {
     const css = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
     const bar = (css.match(/\.bar\s*\{([^}]*)\}/) || [])[1] || '';
-    ok(/color-mix\(in srgb, var\(--series-1\) 32%, var\(--surface\)\)/.test(bar),
-       'the fill is the series colour mixed ~68% toward the CARD, not toward white');
+    /* 55%, the SOLID strength, not the 32% a textured series may use. These
+       bars carry no texture, so the outline is all they have and the fill has
+       to keep more of its colour — the rule's own reasoning, and the reason
+       Sprint Velocity's one solid series sits here too. They were at 32% until
+       2026-09-03; the hover state went to full strength to make room. */
+    ok(/color-mix\(in srgb, var\(--series-1\) 55%, var\(--surface\)\)/.test(bar),
+       'the fill is the series colour mixed ~45% toward the CARD, not toward white');
     ok(/stroke:\s*var\(--series-1\)/.test(bar), 'and the outline is the colour at full strength');
+    const neg = (css.match(/\.bar\.neg\s*\{([^}]*)\}/) || [])[1] || '';
+    ok(/color-mix\(in srgb, var\(--series-2\) 55%, var\(--surface\)\)/.test(neg)
+       && /stroke:\s*var\(--series-2\)/.test(neg),
+       'and the negative bars are the same arrangement on the ramp\'s second token');
+    /* A key that does not depict the mark is worse than no key. Pinned to the
+       SAME number as the bar, so the two cannot drift apart silently — which is
+       exactly what raising one without the other would do. */
+    const sw = (css.match(/\.legend\s+\.sw\s*\{([^}]*)\}/) || [])[1] || '';
+    ok(/color-mix\(in srgb, var\(--series-1\) 55%, var\(--surface\)\)/.test(sw)
+       && /border:\s*2px solid var\(--series-1\)/.test(sw),
+       'and the legend swatch is a picture of that bar, at the same strength', sw.trim());
+  });
+  t('the hovered bar fills solid, because the tint below it has moved up', () => {
+    /* The two levels are a pair: the resting fill sits at the rule's solid
+       strength, so the highlight cannot also be 55% — it would be the resting
+       bar. Full strength is what is left, and it is what Money Map's Spending
+       chart already does. Pinned because raising one without the other is a
+       silent way to lose the highlight altogether. */
+    const css = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+    const on = (css.match(/\.bar\.on\s*\{([^}]*)\}/) || [])[1] || '';
+    const negOn = (css.match(/\.bar\.neg\.on\s*\{([^}]*)\}/) || [])[1] || '';
+    ok(/fill:\s*var\(--series-1\)\s*;?/.test(on),
+       'the hovered bar is the series colour itself', on.trim());
+    ok(/fill:\s*var\(--series-2\)\s*;?/.test(negOn),
+       'and so is a hovered negative bar', negOn.trim());
+    ok(!/color-mix/.test(on) && !/color-mix/.test(negOn),
+       'neither is a tint any more — a tint here would be the resting fill again');
   });
 
   group('auto is the default, in all three places');

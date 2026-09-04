@@ -536,15 +536,34 @@
   .charttip .n { display: block; color: var(--text-primary); font-weight: var(--fw-semibold);
                  margin-bottom: 2px; }
   /* The bar under the pointer, so the tooltip is never the only thing saying
-     which one is being read — the same reason the siblings' charts highlight. */
-  .bar.on { fill: color-mix(in srgb, var(--series-1) 55%, var(--surface)); }
-  .bar.neg.on { fill: color-mix(in srgb, var(--series-2) 55%, var(--surface)); }
+     which one is being read — the same reason the siblings' charts highlight.
+     FULL STRENGTH, and it moved here from 55% on 2026-09-03. The resting fill
+     is what changed underneath it: it used to sit at 32% and now sits at the
+     55% this rule was using, so a hover that stayed put would have been
+     invisible. Money Map's Spending chart is the family's existing answer to
+     exactly that squeeze — its hovered bar fills solid, and nothing else on
+     that chart is — so this is that, not a new idea.
+     A transient hover state, never an encoding: it says "this one", and it
+     reuses the series colour rather than introducing one. */
+  .bar.on { fill: var(--series-1); }
+  .bar.neg.on { fill: var(--series-2); }
   .chart-wrap { overflow-x: auto; position: relative; height: 300px; }
   /* Fills its box exactly, because renderChart draws the viewBox at the box's own
      measured size — so one unit is one pixel and nothing is scaled. */
   svg.chart { display: block; width: 100%; height: 100%; min-width: 320px; }
-  .bar { fill: color-mix(in srgb, var(--series-1) 32%, var(--surface)); stroke: var(--series-1); stroke-width: 2; }
-  .bar.neg { fill: color-mix(in srgb, var(--series-2) 32%, var(--surface)); stroke: var(--series-2); }
+  /* Pack rule 3: a tint fill plus a full-strength edge, mixed toward the CARD
+     rather than toward white, which is the one constant covering all four
+     themes. 55% of the colour, not 32%, and the difference is the rule's own:
+     a TEXTURED series can travel further from its colour because the texture
+     puts full strength back over part of the bar, while a SOLID one has
+     nothing but its outline and washes out on the white Light card. These bars
+     are solid, so they keep more of their colour.
+     They sat at 32% — the textured strength — until 2026-09-03, which bought
+     the hover state above a place to stand and cost the resting bars the
+     contrast the rule exists to protect. The hover went to full strength
+     instead; see the note on `.bar.on`. */
+  .bar { fill: color-mix(in srgb, var(--series-1) 55%, var(--surface)); stroke: var(--series-1); stroke-width: 2; }
+  .bar.neg { fill: color-mix(in srgb, var(--series-2) 55%, var(--surface)); stroke: var(--series-2); }
   .gridline { stroke: var(--chart-grid); stroke-width: 1; }
   .axisline { stroke: var(--chart-tick); stroke-width: 1; }
   .ticktext { fill: var(--chart-tick); font-size: var(--fs-xs); }
@@ -624,11 +643,19 @@
   .legend { display: flex; gap: var(--sp-5); flex-wrap: wrap; font-size: var(--fs-xs);
             color: var(--text-secondary); margin-top: var(--sp-4); }
   .legend .li { display: flex; align-items: center; gap: var(--sp-3); }
+  /* The swatch is a picture of the BAR, so it carries the bar's own arrangement
+     and its own numbers — 55% under a 2px full-strength edge. It moved with the
+     bars on 2026-09-03; leaving it at 32% would have made the key a picture of a
+     mark the chart no longer draws, which is the one thing a key must not be.
+     Kept as a tint rather than filled solid, unlike Money Map's: the pack's
+     carve-out is about swatches that have to be told apart from EACH OTHER, and
+     there are two here under edges that are most of a 22x10 box — where Money
+     Map's Where It's Held has five accounts to separate. */
   .legend .sw { width: 22px; height: 10px; border-radius: 2px; flex: none;
                 border: 2px solid var(--series-1);
-                background: color-mix(in srgb, var(--series-1) 32%, var(--surface)); }
+                background: color-mix(in srgb, var(--series-1) 55%, var(--surface)); }
   .legend .sw.two { border-color: var(--series-2);
-                    background: color-mix(in srgb, var(--series-2) 32%, var(--surface)); }
+                    background: color-mix(in srgb, var(--series-2) 55%, var(--surface)); }
   .legend .sw.avg { height: 0; border: 0; border-top: 2px dashed var(--series-3);
                     border-radius: 0; background: none; }
 
