@@ -59,7 +59,7 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 | | |
 |---|---|
 | **Welcome card** | The three choices Money Map opens on, decided before first paint so nothing flashes |
-| **Two tabs** | `data-tab` on `<html>` set in `<head>`; CSS switches, a real tablist with arrow keys, both panels print |
+| **Two tabs** | `data-tab` on `<html>` set in `<head>`; CSS switches, a real tablist with arrow keys, both panels print. A press starts the new view at the **top** — see below |
 | **Summary tiles** | On `subgrid` so labels line up across a row, and laid out by COUNT: the row fills one line when it fits, splits into equal rows when it doesn't, and stretches a short last row to finish the line. Change the `tiles` array to any number from two to eight and the CSS follows — nothing to re-derive |
 | **A chart** | SVG, so it follows a theme change *and* the print palette for free. Tint fill + full-strength edge (pack rule 3), `--series-*` only (rule 4). Drawn at the box's own pixel size and redrawn when it changes, so nothing is ever scaled |
 | **A chart card** | The siblings' anatomy: name, an info dot, a sentence saying what is plotted, a 300px box, and a button that lifts the chart out to fill the window (Escape, the button again, or a click outside) |
@@ -190,6 +190,15 @@ breaking a render on purpose and watching the suite go red where nothing else no
   `goToSearchHit()` call a click on the first hit makes. With nothing matching there is
   nothing to go to and the window stays open. Copy both listeners; an app that takes only the
   `input` one ships a search box that ignores its own return key.
+- **Where a press leaves the page.** The family's rule, in one sentence: *changing what you
+  are looking at goes to the top, changing which record or period you are looking at holds
+  still.* A tab press scrolls to the top — but only when the tab actually changed, so pressing
+  the one you are on never throws the page about, and the scroll lives in `pressTab()` rather
+  than in `setTab()`, which also runs at boot and from a search hit. A `goToSearchHit()` that
+  opens no record lands the same way; one that **opens a record leaves the page alone**, since
+  the editor is over the row that was searched for and moving the page would strand the reader
+  at the top of a long table the moment it closed. Whether a hit opens a record is decided once,
+  into `opensRecord`, because the landing and the editor ask the same question.
 - **After a hit, the keyboard lands somewhere the reader can see.** Closing a dialog hands the
   focus back to whatever held it before, so a ⌘K pressed from nowhere in particular dropped it
   on `<body>`. `goToSearchHit()` now ends by reading `document.activeElement`: a focus on

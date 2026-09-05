@@ -2267,7 +2267,15 @@ function goToSearchHit(h) {
   render();
   /* The record found is the record on screen. Not in a shared view, where there
      is no editor to open and every write surface has already been taken away. */
-  if (h.id && !viewOnly) openEntry(h.id);
+  const opensRecord = !!(h.id && !viewOnly);
+  /* AND WHERE THE PAGE LANDS (2026-09-05). A hit that only changes the view is a
+     tab press by another route, so it starts that view at the top rather than at
+     the offset the last one left behind. A hit that OPENS A RECORD is the
+     exception: the reader asked for that record, the editor is over it, and
+     moving the page would strand them at the top of a long table the moment they
+     closed it. */
+  if (!opensRecord) window.scrollTo(0, 0);
+  if (opensRecord) openEntry(h.id);
   /* WHERE THE KEYBOARD IS AFTERWARDS (2026-09-04). The rule, and it is worth
      copying whole: A FOCUS THAT IS ALREADY VISIBLE IS LEFT ALONE; only a focus
      on nothing the reader can see is moved, and it goes to the tab of the view
@@ -2588,6 +2596,29 @@ function setTab(name) {
   document.getElementById('entriesPanel').hidden = t !== 'entries';
 }
 
+/* A TAB PRESS STARTS THE NEW VIEW AT THE TOP. The family's rule, given by
+   Charles on 2026-09-05 and carried into all five tabbed apps: CHANGING WHAT
+   YOU ARE LOOKING AT GOES TO THE TOP, CHANGING WHICH RECORD OR PERIOD YOU ARE
+   LOOKING AT HOLDS STILL. Without it a view opened still scrolled to wherever
+   the last one had you, and what that showed was never twice the same — the
+   views are different heights, so the browser clamps a position that no longer
+   exists, and a pinned band changes what the same number has under it.
+
+   IT IS A PRESS THAT SCROLLS, NOT setTab() — which also runs at boot and from a
+   search hit, where a page jumping to the top would be a second thing happening
+   that nobody asked for. Only when the tab actually changed: pressing the tab
+   you are already on must not throw the page about. Instant, never smooth: a
+   scripted smooth scroll is out of the reduced-motion rule's reach, and in some
+   engines it is a silent no-op.
+
+   A new app built from this file gets the behaviour for free, which is the
+   point of it living here. */
+function pressTab(name) {
+  const moved = document.documentElement.getAttribute('data-tab') !== name;
+  setTab(name);
+  if (moved) window.scrollTo(0, 0);
+}
+
 /* Arrow keys move between tabs, as in every sibling's tablist. */
 document.querySelector('.tabs').addEventListener('keydown', (e) => {
   const i = TABS.indexOf(document.documentElement.getAttribute('data-tab'));
@@ -2598,11 +2629,11 @@ document.querySelector('.tabs').addEventListener('keydown', (e) => {
   if (e.key === 'End') next = TABS[TABS.length - 1];
   if (!next) return;
   e.preventDefault();
-  setTab(next);
-  document.getElementById('tab-' + next).focus();
+  pressTab(next);
+  document.getElementById('tab-' + next).focus({ preventScroll: true });
 });
 document.querySelectorAll('.tab').forEach((b) =>
-  b.addEventListener('click', () => setTab(b.dataset.tab)));
+  b.addEventListener('click', () => pressTab(b.dataset.tab)));
 
 /* ═══════════════════════════════ Share links ═══════════════════════════════
    The figures travel INSIDE the link. Nothing is uploaded and no copy is kept —
