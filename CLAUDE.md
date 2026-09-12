@@ -23,6 +23,13 @@ break one app, it ships silently inside every app that hasn't been started yet.
 
 ## Editing rules
 
+- **Nothing below the header is painted until the first `render()` has run — `data-booting` (2026-09-12).** Every panel inside `<main>` is built by `render()`, so `<main>` measures 0 at first paint. **This is the template every new app starts from, so the gate ships with it** and every future app inherits it. The browser paints the parsed body before the main script executes, so first paint was the header and then the **footer immediately under it**: the privacy line — "…sign in with Google…" — flashing at the top of the page on every refresh, before the app appeared and shoved it back down. Charles saw it in Money Map; a sweep of all eight pages on 2026-09-12 found **five** doing it (Money Map, Sprint Velocity, League Night, PAPTrack and the `claude-starter` template) and three clean (Golf Handicap, Flow Metrics, the NY calculator — clean because their cards are REAL MARKUP inside `<main>`). The fix is the arrangement the head script already uses for the theme: a thing settled a frame late is a page that visibly jumps as it opens.
+  - **Set in the HEAD script, before anything that can throw.** The theme read below it touches `localStorage`, which a private-mode browser throws on — and that is the browser most likely to be slow enough to show the flash.
+  - **Released in the SAME TASK as the first render.** A frame later and the reveal is itself the flash.
+  - **`visibility: hidden`, NEVER `display: none`.** `render()` runs while the gate is on and a chart sizes itself off its container; a zero-width container is a zero-width chart that never corrects itself, because nothing re-measures once it has built. The boxes stay; only the painting is held. The suite asserts the measured width is unchanged while gated, which is what pins this.
+  - **A `DOMContentLoaded` backstop removes it too**, so a script that dies on the way to the release can never leave the page blank.
+  - The header is deliberately outside the gate: static markup, already correct at first paint.
+  - **Don't count markup to decide whether a page has this** — League Night and PAPTrack were first written off as clean on a line count of what sits inside `<main>`, and both were wrong: their panels are `hidden` until the first render, so `<main>` measures 0. Measure the rendered box.
 - **Every comment is a teaching comment.** The copier reads this file's
   comments as documentation of family rules, so a stale one doesn't just
   mislead a reader — it mis-teaches every future app. When code changes, the
