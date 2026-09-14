@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 133;
+const EXPECTED = 139;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -280,6 +280,64 @@ async function runAsync() {
      purpose: if the walk fell over, the tests after it still need their fixture
      rather than whatever the walk was holding when it stopped. */
   try { H.__plant(FIXTURE); W.setTab('entries'); } catch (e) { /* reported by the walk's own verdict */ }
+
+  /* ── The header and the tab bar as single scrolling lines (2026-09-14) ─────
+     Charles, family-wide: "should we just make them both always single line
+     side scrollers?" Measured in two frames of their own — 360px, where the
+     header's controls cannot fit even on a line of their own, and 1600px, where
+     nothing may have changed. The sample data is planted in memory first, since
+     a fresh profile boots into the welcome card, which hides the tab row and
+     would leave nothing to measure. Recorded here and asserted below, because a
+     test body in this runner is not awaited. */
+  try {
+    const rowFrame = (w) => new Promise((resolve, reject) => {
+      const f = document.createElement('iframe');
+      f.setAttribute('data-starter-tests', '');
+      f.setAttribute('aria-hidden', 'true');
+      f.style.cssText = 'position:absolute;left:-9999px;top:0;border:0;width:' + w + 'px;height:800px';
+      const timer = setTimeout(() => { f.remove(); reject(new Error('the ' + w + 'px frame never loaded')); }, 15000);
+      f.addEventListener('load', () => { clearTimeout(timer); resolve(f); }, { once: true });
+      f.src = 'index.html?rows=' + w + '-' + Date.now();
+      document.body.appendChild(f);
+    });
+    /* Two frames and a beat: the ResizeObserver behind the arrows reports after
+       layout, not during it. */
+    const settle = (FW) => new Promise((r) =>
+      FW.requestAnimationFrame(() => FW.requestAnimationFrame(() => setTimeout(r, 30))));
+    const measure = async (w) => {
+      const f = await rowFrame(w);
+      try {
+        const FW = f.contentWindow, D = FW.document, FH = FW.__starterTestHooks;
+        FH.__plant({ entries: FH.sampleData(), settings: FH.defaultSettings() });
+        await settle(FW);
+        const vis = (el) => el.getClientRects().length > 0 && !el.classList.contains('sr-only')
+          && FW.getComputedStyle(el).display !== 'none';
+        const lines = (el) => new Set([...el.children].filter(vis)
+          .map((c) => Math.round(c.getBoundingClientRect().top))).size;
+        const ctl = D.querySelector('.headctl'), tabs = D.querySelector('.tabs');
+        const headNav = D.querySelector('.headrow > .rownav'), tabNav = D.querySelector('.tabrow > .rownav');
+        const [prev, next] = headNav.querySelectorAll('button');
+        const m = {
+          welcome: D.documentElement.hasAttribute('data-welcome'),
+          ctlLines: lines(ctl), tabLines: lines(tabs),
+          ctlRoom: ctl.scrollWidth - ctl.clientWidth, tabRoom: tabs.scrollWidth - tabs.clientWidth,
+          headNavShown: !headNav.hidden, tabNavShown: !tabNav.hidden,
+          prevOffAtStart: prev.disabled, nextOnAtStart: !next.disabled,
+          besideName: Math.abs(ctl.getBoundingClientRect().top
+            - D.querySelector('.brand').getBoundingClientRect().top) < 16,
+          pageRoom: D.documentElement.scrollWidth - FW.innerWidth,
+        };
+        if (m.headNavShown) {
+          next.click();
+          m.scrolledTo = ctl.scrollLeft;
+          await settle(FW);
+          m.prevOnAfter = !prev.disabled;
+        }
+        return m;
+      } finally { f.remove(); }
+    };
+    asyncResults.rows = { narrow: await measure(360), wide: await measure(1600) };
+  } catch (e) { asyncResults.rows = { error: e.message }; }
 
   try {
     const payload = H.buildSharePayload({
@@ -981,7 +1039,8 @@ function define() {
     });
   });
   t('the theme picker is the LAST control in the header row', () => {
-    const bar = (APP_SRC.match(/<div class="headbar">([\s\S]*?)<\/div>/) || [])[1] || '';
+    /* The controls live in `.headctl` since 2026-09-14 — the one-line scroller. */
+    const bar = (APP_SRC.match(/<div class="headctl">([\s\S]*?)<\/div>/) || [])[1] || '';
     const ids = (bar.match(/id="(\w+)"/g) || []).map(s => s.replace(/id="|"/g, ''));
     eq(ids[ids.length - 1], 'themeSel',
        'it is the one control that changes nothing but how the page looks');
@@ -993,6 +1052,51 @@ function define() {
     eq(W.getComputedStyle(W.document.getElementById('themeSel')).width === '100%', false);
     const bar = W.document.querySelector('.headbar');
     ok(bar.getBoundingClientRect().height < 60, 'the header row must stay one line at 1000px');
+  });
+  /* ── One scrolling line, at every width (2026-09-14) ─────────────────────────
+     The header's controls and the tab bar never wrap: a row that does not fit
+     scrolls sideways, with ‹ › arrows beside it for a mouse. Measured live in
+     runAsync(); these read the verdict. */
+  const rowVerdict = (which) => {
+    const r = asyncResults.rows;
+    ok(r && !r.error, 'the row frames were measured', r && r.error);
+    ok(!r[which].welcome, 'sanity: the sample data took the welcome card away, so the tab row is on screen');
+    return r[which];
+  };
+  t('where the header controls do not fit, they are ONE line that scrolls, with arrows (360px)', () => {
+    const m = rowVerdict('narrow');
+    ok(m.ctlRoom > 1, 'sanity: the controls overflow here — otherwise nothing is being measured', m.ctlRoom + 'px');
+    eq(m.ctlLines, 1, 'the controls are one line, not wrapped');
+    ok(m.pageRoom <= 0, 'and the PAGE does not scroll sideways because of it', m.pageRoom + 'px');
+    ok(m.headNavShown, 'the arrows show while something is off an end');
+    ok(m.prevOffAtStart && m.nextOnAtStart, 'at the start ‹ is off and › is on');
+    ok(m.scrolledTo > 0, 'pressing › scrolls the row', m.scrolledTo);
+    ok(m.prevOnAfter, 'and ‹ comes on once there is something behind');
+  });
+  t('where everything fits, nothing changes: no arrows, the controls beside the name (1600px)', () => {
+    const m = rowVerdict('wide');
+    ok(m.ctlRoom <= 1, 'the controls fit', m.ctlRoom + 'px');
+    ok(!m.headNavShown && !m.tabNavShown, 'so neither row shows its arrows');
+    ok(m.besideName, 'and the controls sit on the name’s line, as they always have');
+  });
+  t('the tab bar is one row that scrolls, with its arrows OUTSIDE the tablist', () => {
+    eq(rowVerdict('narrow').tabLines, 1, 'one row at 360px');
+    eq(rowVerdict('wide').tabLines, 1, 'and at 1600px');
+    const D = W.document, bar = D.querySelector('[role="tablist"]');
+    ok(bar && bar.parentElement.classList.contains('tabrow'), 'the tablist sits in .tabrow');
+    ok(D.querySelector('.tabrow > .rownav.no-print'), 'beside its arrows, which never print');
+    ok(!bar.querySelector('.rownav'), 'and the arrows are not inside the tablist, where they would read as tabs');
+    const css = stripComments(APP_SRC);
+    ok(/\.tabs \{[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto;/.test(css), 'the bar itself is the scroller');
+    ok(/\.rownav \{ flex: none; white-space: nowrap; \}/.test(css),
+       'the arrow box sets no display, so `hidden` still hides it');
+    ok(/@media \(hover: none\), \(pointer: coarse\) \{ \.rownav \{ display: none !important; \} \}/.test(css),
+       'the arrows are for a mouse or trackpad — a finger swipes the row (the harness cannot emulate '
+       + 'pointer media, so the query itself is what is held)');
+    ok(/@media print[\s\S]*\.headctl \{ overflow: visible !important; flex-wrap: wrap !important; \}/.test(css),
+       'and on paper the header row wraps, because paper cannot scroll');
+    ok(D.querySelectorAll('.rownav button[tabindex="-1"][aria-hidden="true"]').length === 4,
+       'all four arrows are out of the Tab order and hidden from a screen reader');
   });
   t('every dialog announces itself, opens through openModal and closes on a click outside', () => {
     const src = stripComments(APP_SRC);
@@ -1184,7 +1288,8 @@ function define() {
     ok(/Start Fresh/.test(card) && /Load Sample Data/.test(card) && /Restore a Backup/.test(card),
        'the same three Money Map opens on');
     const css = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
-    ok(/html\[data-welcome\] \.tabs/.test(css), 'and the tabs go while it is up');
+    ok(/html\[data-welcome\] \.tabrow/.test(css),
+       'and the tab row goes while it is up — the tablist AND its arrows (2026-09-14)');
   });
   t('the welcome card is ONE measure and ONE colour', () => {
     /* It had three measures (46ch, 52ch, 54ch) and two colours, because the

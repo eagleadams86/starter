@@ -268,6 +268,29 @@
            letter-spacing: var(--ls-tight); }
   .brand span { font-weight: var(--fw-normal); color: var(--text-secondary); }
   .brand .mark { vertical-align: -4px; margin-right: 8px; border-radius: 5px; }
+  /* THE CONTROLS ARE ONE LINE THAT SCROLLS SIDEWAYS, AT EVERY WIDTH (Charles,
+     2026-09-14, family-wide: "should we just make them both always single line
+     side scrollers?" — a 705px desktop window had wrapped them to two lines).
+     Money Map is the reference implementation; this is its shape.
+     `.headrow` is the row and its arrows; `.headctl` is what scrolls. The row is
+     `flex: 0 1 auto` — sized to its content — so while every control fits
+     beside the name it sits there, pushed right by `.brand`'s auto margin
+     exactly as before, and the moment it does not, flex-wrap takes the WHOLE row
+     onto a line of its own, where it shrinks to that line and scrolls. Nothing
+     changes on a window wide enough, and a phone gets the name above one line
+     of controls.
+     THE GAP IS DECLARED HERE and not inherited: a nested row does not get
+     `.headbar`'s 12px, which is how four apps that nested theirs all ended up at
+     8px in the 2026-08-23 sweep. Room for the focus ring on every side is 4px of
+     padding and a matching negative margin, so the box grows inward and no
+     control moves. No scrollbar: the arrows beside the row are the sign there
+     is more, and the thing a mouse can press — a mouse wheel does not scroll
+     sideways, and a Mac hides its bars. */
+  .headrow { display: flex; align-items: center; gap: 4px; flex: 0 1 auto; min-width: 0; }
+  .headctl { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; flex: 0 1 auto;
+    min-width: 0; overflow-x: auto; padding: 4px; margin: -4px; scrollbar-width: none; }
+  .headctl::-webkit-scrollbar { display: none; }
+  .headctl > * { flex: 0 0 auto; }
   .wrap { max-width: var(--page-w); margin: 0 auto; padding: 0 16px 64px; }
 
   /* ── Buttons: Sprint Predictability's, transcribed ──────────────────────────
@@ -339,6 +362,28 @@
                     width: auto; }
   .headbar select:hover { border-color: var(--text-muted); }
 
+  /* ── The two arrows beside a scrolling row ─────────────────────────────────
+     The header's controls and the tab bar each carry a pair (2026-09-14). A
+     plain box that sets NO `display`, so `hidden` — which `wireScrollRow()` sets
+     whenever the row has nothing to scroll — still hides it.
+     The buttons are plain glyphs, not controls: the base `button` rule gives
+     every button a border, a surface and the --control-h floor, and
+     `.headbar button` another floor and padding, so this undoes both. Written
+     AFTER `.headbar button` on purpose — same specificity, so order decides. */
+  .rownav { flex: none; white-space: nowrap; }
+  .rownav button { background: none; border: 0; border-radius: var(--radius-sm);
+    padding: 4px 10px; min-height: auto; color: var(--text-secondary);
+    font-size: var(--fs-md); line-height: 1.1; }
+  .rownav button:hover:not(:disabled) { background: var(--surface-alt); color: var(--text-primary); }
+  .rownav button:disabled { opacity: .35; cursor: default; }
+  .rownav button:focus-visible { outline: 2px solid var(--focus-border); outline-offset: 2px; }
+  /* FOR A MOUSE OR A TRACKPAD ONLY. A finger swipes the row, which is all the
+     arrows stand in for — and in Money Map, on touch, they made a phone's header
+     taller and slid every control out of line. `!important` because
+     `wireScrollRow()` clears `hidden` whenever the row overflows; this keeps
+     them away regardless. */
+  @media (hover: none), (pointer: coarse) { .rownav { display: none !important; } }
+
   :focus-visible { outline: 2px solid var(--focus-border); outline-offset: 2px; }
 
   /* ── Tabs ───────────────────────────────────────────────────────────────────
@@ -347,8 +392,22 @@
      a tab restored by the foot script would paint one panel and then jump. CSS
      does the switching; setTab() only keeps aria-selected and the roving
      tabindex in step. With no script at all the attribute is never set and both
-     panels show, which is the honest fallback. */
-  .tabs { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+     panels show, which is the honest fallback.
+
+     ONE ROW THAT SCROLLS SIDEWAYS AT EVERY WIDTH (2026-09-14, family-wide — see
+     `.headrow`). This app's two tabs never overflow, but an app built from it
+     will grow more, and a bar that wraps to several rows in a narrow window is
+     what the family retired. `.tabrow` holds the tablist and its arrows — the
+     arrows cannot go INSIDE the tablist, where they would be read as tabs — and
+     takes the bottom margin the tablist used to carry. The ring's room (4px
+     padding, -4px margin) and the missing scrollbar are the header's, for the
+     header's reasons. `position: relative` because a scroll box without it has
+     iOS count its full width in the page's own scroll area. */
+  .tabrow { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .tabs { display: flex; gap: 12px; flex: 1 1 auto; min-width: 0; flex-wrap: nowrap;
+    overflow-x: auto; position: relative; padding: 4px; margin: -4px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs > .tab { flex: 0 0 auto; white-space: nowrap; }
   .tab { background: var(--surface-alt); border: 1px solid var(--border-control);
          border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer;
          color: var(--text-primary); font-weight: var(--fw-medium); }
@@ -357,7 +416,7 @@
                                color: var(--btn-text); font-weight: var(--fw-semibold); }
   [data-tab="overview"] #entriesPanel, [data-tab="entries"] #overviewPanel { display: none; }
   /* The welcome card holds the whole page on its own, so the furniture goes. */
-  html[data-welcome] .tabs, html[data-welcome] [role="tabpanel"] { display: none !important; }
+  html[data-welcome] .tabrow, html[data-welcome] [role="tabpanel"] { display: none !important; }
 
   .card { background: var(--surface); border: 1px solid var(--border);
           border-radius: var(--radius); padding: 18px; margin-bottom: var(--sp-6); }
@@ -837,10 +896,11 @@
   @media (max-width: 560px) {
     .grid2 { grid-template-columns: 1fr; }
     .wrap, .headbar { padding-left: var(--sp-5); padding-right: var(--sp-5); }
-    /* A header row that wraps to three lines and then STAYS on screen eats half
-       a phone on the one view you scroll most. It is one flick back up, which is
-       a better trade than losing half of what you came to read. Sticky
-       everywhere it still fits on one or two lines. */
+    /* A header that STAYS on screen eats a real share of a phone on the one
+       view you scroll most. It is one flick back up, which is a better trade
+       than losing that much of what you came to read. Sticky everywhere wider.
+       (It wrapped to three lines here until 2026-09-14; it is the name above
+       one scrolling line of controls now, and still not worth pinning.) */
     header { position: static; }
   }
 
@@ -1143,6 +1203,11 @@
        see. Both panels print: on paper there are no tabs to press. */
     .no-print, .chart-max, #chartMaxi { display: none !important; }
     [data-tab] #entriesPanel, [data-tab] #overviewPanel { display: block !important; }
+    /* The pack hides the tablist itself; its row goes too, or it prints as an
+       empty 20px gap above the first panel. */
+    .tabrow { display: none !important; }
+    /* Paper cannot scroll: what is left of the header row wraps instead. */
+    .headctl { overflow: visible !important; flex-wrap: wrap !important; }
   }
 /* ── The footer every public page in this account carries ────────────────────
    Sprint Predictability's, transcribed — it is the design lead for this chrome,
@@ -1216,6 +1281,12 @@ html[data-booting] footer { visibility: hidden; }
        screen and shoves the page down. -->
   <div class="headbar">
     <h1 class="brand"><img class="mark" src="favicon.ico?v=1" width="22" height="22" alt="">Starter <span>&middot; an app in the family</span></h1>
+    <!-- `.headrow` holds the scroller and its two arrows; the arrows cannot go
+         inside the thing they scroll. The controls sit in `.headctl`, one line
+         that scrolls sideways when it does not fit (2026-09-14). The ORDER
+         inside it is the family's, above. -->
+    <div class="headrow">
+    <div class="headctl">
     <!-- Find sits toward the left-hand end of the row, before the controls that
          change the data — the family's header order. -->
     <button class="no-print" id="findBtn" title="Search everything (⌘K / Ctrl+K)"><span aria-hidden="true">⌕</span> Find</button>
@@ -1235,6 +1306,15 @@ html[data-booting] footer { visibility: hidden; }
       <option value="midnight">✦ Midnight</option>
       <option value="sepia">📜 Sepia</option>
     </select>
+    </div>
+    <!-- Out of the Tab order and hidden from a screen reader on purpose: every
+         control in the row is reachable with Tab, and focusing one scrolls it
+         into view. The arrows are for a pointer. Ships `hidden`;
+         wireScrollRow() shows it only while the row has something off an end. -->
+    <div class="rownav" hidden><button type="button" tabindex="-1" aria-hidden="true"
+      title="Scroll the controls left">‹</button><button type="button" tabindex="-1"
+      aria-hidden="true" title="Scroll the controls right">›</button></div>
+    </div>
   </div>
 </header>
 
@@ -1259,11 +1339,19 @@ html[data-booting] footer { visibility: hidden; }
 <!-- The banner on somebody else's snapshot. -->
 <div class="viewbar no-print" id="viewbar" hidden></div>
 
+<div class="tabrow">
 <div class="tabs" role="tablist" aria-label="Views">
   <button class="tab" role="tab" id="tab-overview" data-tab="overview"
           aria-controls="overviewPanel" aria-selected="true">Overview</button>
   <button class="tab" role="tab" id="tab-entries" data-tab="entries"
           aria-controls="entriesPanel" aria-selected="false" tabindex="-1">Entries</button>
+</div>
+  <!-- The bar's arrows, OUTSIDE the tablist: inside it they would be announced
+       as part of the tab set. Out of the Tab order — the arrow keys already walk
+       the tabs, and a focused tab scrolls itself into view. -->
+  <div class="rownav no-print" hidden><button type="button" tabindex="-1" aria-hidden="true"
+    title="Scroll the tabs left">‹</button><button type="button" tabindex="-1"
+    aria-hidden="true" title="Scroll the tabs right">›</button></div>
 </div>
 
   <!-- ── The welcome card ─────────────────────────────────────────────────────
@@ -2662,6 +2750,47 @@ document.querySelector('.tabs').addEventListener('keydown', (e) => {
 });
 document.querySelectorAll('.tab').forEach((b) =>
   b.addEventListener('click', () => pressTab(b.dataset.tab)));
+
+/* ── A row that scrolls sideways, and the two arrows beside it ───────────────
+   The header's controls and the tab bar are single scrolling lines at every
+   width (2026-09-14, family-wide; Money Map's function, verbatim). A finger
+   swipes them and a trackpad scrolls them, but a mouse wheel does not scroll
+   sideways and a Mac hides its scroll bars — so a control past the edge would
+   be one nobody knew was there. `nav` is a box holding the two arrows: shown
+   only while the row has something off an end, each arrow disabled at its own
+   end, and a press moving the row most of its own width. Instant, never smooth:
+   a scripted smooth scroll is out of the reduced-motion rule's reach.
+
+   What keeps it true without anyone calling it: the row's own scroll, its size
+   (a ResizeObserver — the window, the zoom, the welcome card letting the tabs
+   back in), and what is inside it (a MutationObserver — a shared view hiding
+   the edit buttons, a label changing). Showing the arrows narrows the row, and
+   that only ever leaves it overflowing, so the two cannot flicker.
+
+   Wired here, before boot(): both rows are static markup, and the observers
+   catch whatever the first render changes. Measuring under the `data-booting`
+   gate is safe because the gate is `visibility`, which keeps every box. */
+function wireScrollRow(row, nav) {
+  if (!row || !nav) return;
+  const [prev, next] = nav.querySelectorAll('button');
+  const sync = () => {
+    const room = row.scrollWidth - row.clientWidth;
+    nav.hidden = room <= 1;
+    prev.disabled = row.scrollLeft <= 1;
+    next.disabled = row.scrollLeft >= room - 1;
+  };
+  const step = (dir) => { row.scrollLeft += dir * Math.max(80, Math.round(row.clientWidth * 0.8)); };
+  prev.onclick = () => step(-1);
+  next.onclick = () => step(1);
+  row.addEventListener('scroll', sync, { passive: true });
+  if ('ResizeObserver' in window) new ResizeObserver(sync).observe(row);
+  new MutationObserver(sync).observe(row, { subtree: true, childList: true, characterData: true,
+    attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
+  window.addEventListener('resize', sync);
+  sync();
+}
+wireScrollRow(document.querySelector('.headctl'), document.querySelector('.headrow > .rownav'));
+wireScrollRow(document.querySelector('.tabs'), document.querySelector('.tabrow > .rownav'));
 
 /* ═══════════════════════════════ Share links ═══════════════════════════════
    The figures travel INSIDE the link. Nothing is uploaded and no copy is kept —

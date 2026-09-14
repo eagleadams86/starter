@@ -60,6 +60,7 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 |---|---|
 | **Welcome card** | The three choices Money Map opens on, decided before first paint so nothing flashes |
 | **Two tabs** | `data-tab` on `<html>` set in `<head>`; CSS switches, a real tablist with arrow keys, both panels print. A press starts the new view at the **top** — see below |
+| **One-line header and tab bar** | The header's controls and the tab bar never wrap: at any width, a row that doesn't fit is one line that scrolls sideways, with **‹ ›** arrows beside it for a mouse or trackpad (a finger just swipes). While the controls fit beside the app's name they sit there as before; when they don't, they take a line of their own under it. `wireScrollRow()` keeps the arrows honest on its own — shown only while something is off an end |
 | **Summary tiles** | On `subgrid` so labels line up across a row, and laid out by COUNT: the row fills one line when it fits, splits into equal rows when it doesn't, and stretches a short last row to finish the line. Change the `tiles` array to any number from two to eight and the CSS follows — nothing to re-derive |
 | **A chart** | SVG, so it follows a theme change *and* the print palette for free. Tint fill + full-strength edge (pack rule 3), `--series-*` only (rule 4). Drawn at the box's own pixel size and redrawn when it changes, so nothing is ever scaled |
 | **A chart card** | The siblings' anatomy: name, an info dot, a sentence saying what is plotted, a 300px box, and a button that lifts the chart out to fill the window (Escape, the button again, or a click outside) |
@@ -112,6 +113,12 @@ breaking a render on purpose and watching the suite go red where nothing else no
   per paragraph puts 34px above all three and the block falls apart.
 - **A header `<select>` needs `width: auto`.** The base field rule gives every select
   `width: 100%`, which in a wrapping flex row makes the theme picker claim the whole line.
+- **The arrows beside a scrolling row sit OUTSIDE the thing they scroll.** Inside the tablist
+  they would be announced as tabs, and inside the scroller they would scroll away with it —
+  so the header has `.headrow` around `.headctl`, and the tabs have `.tabrow` around the
+  tablist. The arrow box (`.rownav`) must never set `display`, or `hidden` stops hiding it,
+  and a `(hover: none), (pointer: coarse)` rule keeps it off touch screens, where it only
+  made a phone's header taller. Your app's tabs will outgrow two; the rule is already here.
 - **`[hidden]` needs `!important`.** The browser's own rule is in the user-agent stylesheet
   and *any* author rule beats it, so a class that sets `display` cancels it. Nothing throws.
   This has cost Golf Handicap twice.
