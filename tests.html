@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 139;
+const EXPECTED = 141;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -156,7 +156,7 @@ async function main() {
   H = W.__starterTestHooks;
   define();
   await runAsync();
-  run();
+  await run();
 }
 
 function bootApp() {
@@ -283,12 +283,15 @@ async function runAsync() {
 
   /* ── The header and the tab bar as single scrolling lines (2026-09-14) ─────
      Charles, family-wide: "should we just make them both always single line
-     side scrollers?" Measured in two frames of their own — 360px, where the
-     header's controls cannot fit even on a line of their own, and 1600px, where
-     nothing may have changed. The sample data is planted in memory first, since
-     a fresh profile boots into the welcome card, which hides the tab row and
-     would leave nothing to measure. Recorded here and asserted below, because a
-     test body in this runner is not awaited. */
+     side scrollers?" Measured in three frames of their own — 360px, where the
+     name leaves the row under its 15rem, so the controls go under it and still
+     cannot fit; 705px, where they stay BESIDE the name and scroll there
+     (Charles, the same evening: "keep buttons beside the name"); and 1600px,
+     where nothing may have changed. The sample data is planted in memory first,
+     since a fresh profile boots into the welcome card, which hides the tab row
+     and would leave nothing to measure. Recorded here and asserted below: the
+     runner awaits a test body now, but three frames measured once and read by
+     several tests is cheaper than three frames per test. */
   try {
     const rowFrame = (w) => new Promise((resolve, reject) => {
       const f = document.createElement('iframe');
@@ -327,6 +330,48 @@ async function runAsync() {
             - D.querySelector('.brand').getBoundingClientRect().top) < 16,
           pageRoom: D.documentElement.scrollWidth - FW.innerWidth,
         };
+        /* The keyboard reveal, in the 705px frame, where the controls overflow
+           BESIDE the name. A control half past a row's edge, focused, must be
+           scrolled WHOLE into the row with its ring's room — the browser only
+           brings in a focus target that is entirely hidden. The straddle is
+           MADE rather than hoped for: at rest a 12px gap can land exactly on
+           the edge, and then nothing is half past it. The tab bar is narrowed
+           by hand to get a second row to try it on, since this app's two tabs
+           never overflow on their own. */
+        if (w === 705) {
+          const reveal = (row, items) => {
+            row.scrollLeft = 0;
+            let box = row.getBoundingClientRect();
+            const half = items.find((el) => el.getBoundingClientRect().right > box.right - 1);
+            if (!half) return { found: false };
+            const r0 = half.getBoundingClientRect();
+            row.scrollLeft += Math.max(0, r0.left + r0.width / 2 - box.right);
+            box = row.getBoundingClientRect();
+            const r1 = half.getBoundingClientRect();
+            const straddles = r1.left < box.right && r1.right > box.right;
+            half.focus();
+            const r = half.getBoundingClientRect(), b2 = row.getBoundingClientRect();
+            const res = { found: true, id: half.id, straddles: straddles, focused: D.activeElement === half,
+              visible: half.matches(':focus-visible'),
+              leftRoom: +(r.left - b2.left).toFixed(1), rightRoom: +(b2.right - r.right).toFixed(1) };
+            half.blur();
+            row.scrollLeft = 0;
+            return res;
+          };
+          m.revealHead = reveal(ctl, [...ctl.children].filter(vis));
+          /* Sized from the tabs themselves: room for the first tab whole and a
+             sliver of the second, so the second is the one past the edge — and
+             the row is still wide enough to hold it whole, or no scroll could. */
+          const tabEls = [...tabs.querySelectorAll('[role="tab"]')].filter(vis);
+          const first = tabEls[0].getBoundingClientRect().width;
+          tabs.style.flex = 'none';
+          tabs.style.width = Math.ceil(first + 12 + 8 + 30) + 'px';
+          await settle(FW);
+          m.revealTabs = reveal(tabs, tabEls);
+          m.revealTabs.fits = tabEls.every((el) => el.getBoundingClientRect().width <= tabs.clientWidth - 8);
+          tabs.style.flex = ''; tabs.style.width = '';
+          await settle(FW);
+        }
         if (m.headNavShown) {
           next.click();
           m.scrolledTo = ctl.scrollLeft;
@@ -336,7 +381,7 @@ async function runAsync() {
         return m;
       } finally { f.remove(); }
     };
-    asyncResults.rows = { narrow: await measure(360), wide: await measure(1600) };
+    asyncResults.rows = { narrow: await measure(360), mid: await measure(705), wide: await measure(1600) };
   } catch (e) { asyncResults.rows = { error: e.message }; }
 
   try {
@@ -1078,6 +1123,34 @@ function define() {
     ok(m.ctlRoom <= 1, 'the controls fit', m.ctlRoom + 'px');
     ok(!m.headNavShown && !m.tabNavShown, 'so neither row shows its arrows');
     ok(m.besideName, 'and the controls sit on the name’s line, as they always have');
+  });
+  t('where the controls overflow but the name leaves room, they stay BESIDE the name and scroll there (705px)', () => {
+    /* Charles, 2026-09-14: "keep buttons beside the name". The first cut wrapped
+       the whole row under the name the moment it did not fit; the row now takes
+       whatever the name leaves and only wraps when that is under 15rem. */
+    const m = rowVerdict('mid');
+    ok(m.ctlRoom > 1, 'sanity: the controls overflow here — otherwise nothing is being measured', m.ctlRoom + 'px');
+    ok(m.besideName, 'the controls sit on the name’s line rather than a line of their own');
+    eq(m.ctlLines, 1, 'one line of them');
+    ok(m.headNavShown, 'with their arrows, since something is off the end');
+    ok(m.pageRoom <= 0, 'and the page does not scroll sideways', m.pageRoom + 'px');
+  });
+  t('a control half past a scrolling row’s edge, focused from the keyboard, comes WHOLE into the row', () => {
+    /* The browser scrolls a focused element into view only when it is entirely
+       hidden, so Tab onto a button half past the edge used to leave it half past
+       the edge. wireScrollRow()'s focusin listener brings it in, ring room and
+       all. Tried on both rows in the 705px frame. */
+    const m = rowVerdict('mid');
+    [['the header controls', m.revealHead], ['the tab bar', m.revealTabs]].forEach(([name, r]) => {
+      ok(r && r.found, name + ': there is an item reaching past the edge to test with');
+      ok(r.straddles, name + ': set up — it straddles the edge');
+      ok(r.fits !== false, name + ': set up — and the row is wide enough to hold it whole');
+      ok(r.focused && r.visible, name + ': and it took a keyboard-style focus', JSON.stringify(r));
+      ok(r.leftRoom >= 3 && r.rightRoom >= 3,
+         name + ': focused, it is scrolled fully inside the row with its ring room', r.leftRoom + ' / ' + r.rightRoom);
+    });
+    ok(/if \(t === row \|\| !t\.matches\(':focus-visible'\)\) return;/.test(APP_SRC),
+       'only a keyboard focus scrolls the row — a mouse press on a tab about to be dragged must not move it');
   });
   t('the tab bar is one row that scrolls, with its arrows OUTSIDE the tablist', () => {
     eq(rowVerdict('narrow').tabLines, 1, 'one row at 360px');
@@ -1997,7 +2070,21 @@ function define() {
   });
 }
 
-function run() {
+/* ── EVERY TEST IS AWAITED (2026-09-14) ─────────────────────────────────────
+   This loop used to call `item.fn()` and move on. A plain test either throws or
+   doesn't, so that was fine for them — but an `async` test returns a promise
+   the moment it reaches its first `await`, the loop saw no throw and wrote ✓,
+   and the assertions after the `await` ran later against a row already marked
+   green. Their failures went nowhere at all: a rejected promise nobody holds.
+   The gate test "a loaded page never holds the gate…" was written that way and
+   could never fail. Now the loop awaits whatever a test returns — `await` on a
+   plain function's `undefined` costs nothing — so an async test is as honest as
+   a plain one and can be written in the ordinary way.
+   Raced against a timeout, because an awaited test that never settles (a frame
+   whose `load` never comes) would otherwise leave the page on "Loading…" for
+   ever, which CI reads as a hang rather than a named failure. */
+const TEST_TIMEOUT_MS = 20000;
+async function run() {
   const out = document.getElementById('out');
   let pass = 0, fail = 0;
   for (const item of TESTS) {
@@ -2009,8 +2096,16 @@ function run() {
       tr.appendChild(td); out.appendChild(tr);
       continue;
     }
-    let err = null;
-    try { item.fn(); } catch (e) { err = e; }
+    let err = null, timer = null;
+    try {
+      await Promise.race([
+        Promise.resolve().then(() => item.fn()),
+        new Promise((resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('the test never finished — gave up after '
+            + TEST_TIMEOUT_MS / 1000 + 's')), TEST_TIMEOUT_MS);
+        }),
+      ]);
+    } catch (e) { err = e; } finally { clearTimeout(timer); }
     const tr = document.createElement('tr');
     tr.className = err ? 'fail' : 'pass';
     const st = document.createElement('td');

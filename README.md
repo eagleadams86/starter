@@ -60,7 +60,7 @@ pills, fields and the toast are transcribed from Golf Handicap rather than re-in
 |---|---|
 | **Welcome card** | The three choices Money Map opens on, decided before first paint so nothing flashes |
 | **Two tabs** | `data-tab` on `<html>` set in `<head>`; CSS switches, a real tablist with arrow keys, both panels print. A press starts the new view at the **top** — see below |
-| **One-line header and tab bar** | The header's controls and the tab bar never wrap: at any width, a row that doesn't fit is one line that scrolls sideways, with **‹ ›** arrows beside it for a mouse or trackpad (a finger just swipes). While the controls fit beside the app's name they sit there as before; when they don't, they take a line of their own under it. `wireScrollRow()` keeps the arrows honest on its own — shown only while something is off an end |
+| **One-line header and tab bar** | The header's controls and the tab bar never wrap: at any width, a row that doesn't fit is one line that scrolls sideways, with **‹ ›** arrows beside it for a mouse or trackpad (a finger just swipes). The controls stay **beside the app's name and scroll there**, packed to the right; they only drop to a line of their own under it when the name would leave them less than 15rem — a phone, or a window that narrow. `wireScrollRow()` keeps the arrows honest on its own — shown only while something is off an end — and brings a control reached with **Tab or an arrow key** wholly into view, where the browser alone would leave one half past the edge |
 | **Summary tiles** | On `subgrid` so labels line up across a row, and laid out by COUNT: the row fills one line when it fits, splits into equal rows when it doesn't, and stretches a short last row to finish the line. Change the `tiles` array to any number from two to eight and the CSS follows — nothing to re-derive |
 | **A chart** | SVG, so it follows a theme change *and* the print palette for free. Tint fill + full-strength edge (pack rule 3), `--series-*` only (rule 4). Drawn at the box's own pixel size and redrawn when it changes, so nothing is ever scaled |
 | **A chart card** | The siblings' anatomy: name, an info dot, a sentence saying what is plotted, a 300px box, and a button that lifts the chart out to fill the window (Escape, the button again, or a click outside) |
@@ -91,7 +91,9 @@ later:
 constant means a test that goes *missing* fails the build — a suite that quietly shrank to
 three checks still reports "all 3 tests pass". The count lives in `tests.html` and the page
 prints it; this paragraph deliberately doesn't, because a number written here goes stale the
-next time a test is added and then quietly misreports what the suite covers.
+next time a test is added and then quietly misreports what the suite covers. **Every test is
+awaited**, so an `async` test that fails after an `await` fails the run — until 2026-09-14 the
+runner called each test and moved on, and an async one was marked passed before its checks ran.
 
 **And a smoke test, because everything else here is a pure function.** Pinning the arithmetic
 and the boundaries leaves the largest part of the file — the render layer — never executed at
