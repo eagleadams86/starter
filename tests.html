@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 141;
+const EXPECTED = 142;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -370,6 +370,41 @@ async function runAsync() {
           m.revealTabs = reveal(tabs, tabEls);
           m.revealTabs.fits = tabEls.every((el) => el.getBoundingClientRect().width <= tabs.clientWidth - 8);
           tabs.style.flex = ''; tabs.style.width = '';
+          await settle(FW);
+          /* The browser's OWN scroll to a focus, under the pinned header
+             (2026-09-14). A control is put in the two places that scroll lets
+             it stay behind the bar — half above the window's top edge (where
+             Shift+Tab back up the page leaves one), and wholly inside the band
+             the bar covers (which counts as visible, so is not scrolled at
+             all) — then focused with no preventScroll. A spacer gives the page
+             the scroll room to do it however short the sample leaves it. */
+          const head = D.querySelector('header');
+          const spacer = D.createElement('div');
+          spacer.style.height = '3000px';
+          D.body.appendChild(spacer);
+          await settle(FW);
+          const hb = head.getBoundingClientRect().height;
+          const target = [...D.querySelectorAll('button, a[href]')].find((el) => {
+            if (!vis(el) || head.contains(el) || el.matches('.skip') || el.closest('dialog')) return false;
+            const r = el.getBoundingClientRect();
+            return r.left >= 0 && r.width > 0 && r.height > 0 && r.height < hb - 6;
+          });
+          const land = (want) => {
+            FW.scrollBy(0, target.getBoundingClientRect().top - want);
+            const placed = Math.abs(target.getBoundingClientRect().top - want) < 2;
+            const stuck = head.getBoundingClientRect().top <= 1;
+            target.focus();
+            const res = { placed: placed, stuck: stuck, focused: D.activeElement === target,
+              top: +target.getBoundingClientRect().top.toFixed(1), headBottom: +head.getBoundingClientRect().bottom.toFixed(1) };
+            target.blur();
+            return res;
+          };
+          if (target) {
+            const h = target.getBoundingClientRect().height;
+            m.focusUnder = { found: true, id: target.id, straddle: land(-Math.round(h / 2)), under: land(Math.round(hb - h - 3)) };
+          } else m.focusUnder = { found: false };
+          spacer.remove();
+          FW.scrollTo(0, 0);
           await settle(FW);
         }
         if (m.headNavShown) {
@@ -1151,6 +1186,30 @@ function define() {
     });
     ok(/if \(t === row \|\| !t\.matches\(':focus-visible'\)\) return;/.test(APP_SRC),
        'only a keyboard focus scrolls the row — a mouse press on a tab about to be dragged must not move it');
+  });
+  t('a control focused half above the window, or behind the pinned header, lands BELOW the header', () => {
+    /* Charles, 2026-09-14: "fix the sticky header shift+tab issue". The
+       browser's scroll to a focus lines a control up with the top of the WINDOW,
+       where the sticky bar is, and leaves one already inside the bar's band
+       where it is. `html { scroll-padding-top }` from the header's measured
+       height moves the window's top edge below the bar. Measured in runAsync()'s
+       705px frame, where the header is pinned. */
+    const f = rowVerdict('mid').focusUnder;
+    ok(f && f.found, 'there is a control short enough to sit wholly behind the header', JSON.stringify(f));
+    [['half above the window', f.straddle], ['wholly behind the header', f.under]].forEach(([name, r]) => {
+      ok(r.placed && r.stuck, name + ': set up — it was put there, with the header pinned', JSON.stringify(r));
+      ok(r.focused, name + ': and it took the focus');
+      ok(r.top >= r.headBottom, name + ': focused, it lands below the header’s bottom',
+         'top ' + r.top + ' vs header bottom ' + r.headBottom);
+    });
+    const css = stripComments(APP_SRC);
+    ok(/html \{ scroll-padding-top: calc\(var\(--head-h, 0px\) \+ 8px\); \}/.test(css),
+       'the clearance is the header’s MEASURED height, plus room for the ring');
+    ok(/new ResizeObserver\(\(\) => \{\s*document\.documentElement\.style\.setProperty\('--head-h'/.test(css),
+       'written by an observer on the header, since nothing calls it when the bar changes depth');
+    ok(/header \{ position: static; \}\s*html \{ scroll-padding-top: 0; \}/.test(css),
+       'and where the header is not pinned (560px and under) there is nothing to clear');
+    ok(!/scroll-margin-top/.test(css), 'no per-control scroll-margin-top as well — the two would add together');
   });
   t('the tab bar is one row that scrolls, with its arrows OUTSIDE the tablist', () => {
     eq(rowVerdict('narrow').tabLines, 1, 'one row at 360px');

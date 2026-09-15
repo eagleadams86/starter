@@ -259,6 +259,21 @@
      instead of running on below. */
   header { position: sticky; top: 0; z-index: 20; background: var(--surface);
            border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px; }
+  /* A KEYBOARD FOCUS NEVER LANDS UNDER THE PINNED BAR (2026-09-14). The
+     browser's own scroll to a focused control — Tab, and above all Shift+Tab
+     back up the page — lines it up with the top of the WINDOW, which is where
+     this bar sits; and a control wholly inside the band the bar covers counts
+     as visible, so it is not scrolled at all. Measured with the sample data:
+     every control put half above the window or behind the bar was focused
+     still behind it. `scroll-padding-top` tells the browser the top of the
+     window starts below the bar. The height is MEASURED (`--head-h`, written by
+     a ResizeObserver beside `wireScrollRow()`), because the bar changes depth
+     with the window, the zoom and the name wrapping; +8px keeps the focus ring
+     clear of its edge. Golf Handicap 8935363 is the reference. An app that
+     pins more chrome under the bar (Money Map's 📌) measures that too, as one
+     `--pin-clear`, and must not ALSO give controls a `scroll-margin-top` —
+     the two add together. */
+  html { scroll-padding-top: calc(var(--head-h, 0px) + 8px); }
   .headbar { max-width: var(--page-w); margin: 0 auto; padding: 0 16px;
              display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   /* The app name is --fs-md in EVERY app. That is the role contract (pack rule
@@ -908,6 +923,9 @@
        (It wrapped to three lines here until 2026-09-14; it is the name above
        one scrolling line of controls now, and still not worth pinning.) */
     header { position: static; }
+    /* Nothing is pinned here, so nothing to clear: the header's height would
+       only push every focus that much further down the screen. */
+    html { scroll-padding-top: 0; }
   }
 
   fieldset.formpanel { border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -2815,6 +2833,17 @@ function wireScrollRow(row, nav) {
 }
 wireScrollRow(document.querySelector('.headctl'), document.querySelector('.headrow > .rownav'));
 wireScrollRow(document.querySelector('.tabs'), document.querySelector('.tabrow > .rownav'));
+/* The pinned header's height, for `html { scroll-padding-top }` — see the note
+   beside that rule. Observed rather than read once: the bar changes depth with
+   the window, the zoom and the name wrapping, and nothing calls this. Golf
+   Handicap's, verbatim. */
+(() => {
+  const head = document.querySelector('header');
+  if (!head || !('ResizeObserver' in window)) return;
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--head-h', Math.ceil(head.getBoundingClientRect().height) + 'px');
+  }).observe(head);
+})();
 
 /* ═══════════════════════════════ Share links ═══════════════════════════════
    The figures travel INSIDE the link. Nothing is uploaded and no copy is kept —
