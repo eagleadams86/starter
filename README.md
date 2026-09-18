@@ -86,7 +86,7 @@ later:
 | `ID_RE` | ids are a key prefix and reach `data-id` attributes, so anything not `[A-Za-z0-9_-]{1,64}` is replaced and every reference rewritten |
 | `esc()` | everything rendered, every time |
 | `viewOnly` | one flag, checked in `save()` — the single write path |
-| the `storage` listener | adopts another tab's write, and never saves from inside it |
+| the `storage` listener | adopts another tab's write, and never saves from inside it — so an app built from this is never the stale window that overwrites the other's work; the editor re-finds its entry by id at Save, and says so when the other tab has deleted it |
 
 **A test suite with a floor.** Every rule above is pinned by a test, and an `EXPECTED`
 constant means a test that goes *missing* fails the build — a suite that quietly shrank to

@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 142;
+const EXPECTED = 143;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -1646,6 +1646,37 @@ function define() {
        'there is no editor to open in somebody else’s snapshot');
     ok(/if \(!opensRecord\) window\.scrollTo\(0, 0\)/.test(src),
        'and a hit that opens none starts the view it opened at the top');
+  });
+  t('saving an entry another tab has deleted says so, and changes nothing', () => {
+    /* The storage listener can replace `state` while the editor is open — which is
+       why Save re-finds its entry by id. When the entry was GONE it wrote nothing
+       and still toasted "Entry updated". save() is stubbed for the press: this
+       suite never writes the reader's storage. */
+    const D = W.document, realSave = W.save;
+    W.save = () => {};
+    try {
+      H.__plant(FIXTURE);
+      W.setTab('entries');
+      const victim = H.__state().entries[0];
+      W.openEntry(victim.id);
+      ok(D.getElementById('entryDialog').open, 'the editor is open on an entry');
+      /* The other tab deletes it, and this tab adopts that. */
+      H.__plant({ version: FIXTURE.version, settings: FIXTURE.settings,
+        entries: FIXTURE.entries.filter((e) => e.id !== victim.id) });
+      const before = JSON.stringify(H.__state().entries);
+      D.getElementById('f_name').value = 'Edited in a stale window';
+      D.getElementById('entrySave').click();
+      eq(JSON.stringify(H.__state().entries), before, 'nothing was changed, and the entry was not brought back');
+      ok(!D.getElementById('entryDialog').open, 'the editor closed');
+      const said = D.getElementById('toast').textContent;
+      ok(/deleted in another tab/.test(said), 'and the toast says what happened', said);
+      ok(!/Entry updated/.test(said), 'rather than claiming an update that did not happen', said);
+    } finally {
+      W.save = realSave;
+      if (D.getElementById('entryDialog').open) D.getElementById('entryDialog').close();
+      H.__plant(FIXTURE);
+      W.setTab('entries');
+    }
   });
   t('Enter in the Find box opens the first hit — and with nothing matching, leaves the window open', () => {
     /* Enter is the one key a search box teaches, and until 2026-09-04 the only

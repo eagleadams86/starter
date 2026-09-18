@@ -132,3 +132,24 @@ the same faults were found here. Each fix has its own test in the
   snapshot banner, because `load` fires before `boot()` has awaited
   `decodeShare()`. An app copied from here that grows a view with no editor
   behind it takes this helper too.
+
+## Two Open Copies: Checked Against the Family's Fix, and Already Right (2026-09-18)
+
+Sprint Predictability, Flow Metrics and Money Map were each found writing a stale board over
+another open tab's work (SV's 2026-09-18 review, ported the same day). **The starter never had the
+fault, and nothing was ported into it**: its `storage` listener adopts another tab's write the
+moment it lands — dialog open or not — and never saves from inside it, which is Golf Handicap's
+shape. The siblings' second half (`save()` refusing to write over bytes it did not last read) is
+deliberately absent: with a listener that always adopts, a stale copy does not arise, and a marker
+every future writer must keep true is a cost with nothing behind it. **An app grown from this keeps
+that protection only while the listener adopts unconditionally** — the day somebody adds "not while
+a dialog is open" (Sprint Predictability's rule, for its save-as-you-go windows), the `save()` half
+becomes necessary; take it from that app, or from Money Map if the new app syncs (it compares the
+plan's MEANING, because sync rewrites the same data in different bytes).
+
+One thing WAS wrong, found by reading the editor against that listener: Save re-finds its entry by
+id (right), and when the other tab had DELETED it, wrote nothing and still toasted "Entry updated".
+It now closes, redraws and says "That entry was deleted in another tab, so there was nothing to
+update." Not re-created from the boxes — a delete made on purpose is not undone by a stale window's
+Save. The test stubs `save()` for the press; this suite never writes the reader's storage.
+EXPECTED 142 → 143.

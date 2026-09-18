@@ -3049,7 +3049,19 @@ $('entrySave').addEventListener('click', () => {
        `state` while this dialog was open, and writing to a detached copy is a
        change that vanishes silently. */
     const it = state.entries.find((x) => x.id === editingId);
-    if (it) { it.name = name; it.value = value; it.date = date; }
+    /* …and GONE is an answer too (2026-09-18). The other tab may have deleted the
+       entry while this editor was open; the old `if (it) …` then wrote nothing and
+       still toasted "Entry updated" — a claim about a change that did not happen.
+       Say what is true, close, and leave the adopted state alone. Not re-created
+       from the boxes: a delete somebody made on purpose is not undone by a stale
+       window's Save. */
+    if (!it) {
+      $('entryDialog').close();
+      render();
+      toast('That entry was deleted in another tab, so there was nothing to update.', 5000);
+      return;
+    }
+    it.name = name; it.value = value; it.date = date;
   } else {
     state.entries.push({ id: uid(), name: name, value: value, date: date });
   }
