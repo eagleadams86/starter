@@ -53,6 +53,9 @@ font size. Every size picked by ROLE from the pack's contract, so this page and 
 seven read as one application: page title `xl`, card and dialog headings `md`, body and
 buttons `base`, table rows `sm`, chrome and footers `xs`. Buttons, dialogs, tabs, tiles,
 pills, fields and the toast are transcribed from Golf Handicap rather than re-invented.
+A `disabled` button is dimmed with the "not allowed" cursor by `theme.css` itself (pack rule 20,
+2026-10-23), so a page built from here needs no `:disabled` rule of its own — only a re-assertion
+on `:disabled:hover` if its own `:hover` changes opacity.
 
 **The features every sibling has:**
 

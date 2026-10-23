@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 150;
+const EXPECTED = 151;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -618,6 +618,25 @@ function define() {
     ok(/<link[^>]+href="theme\.css"/.test(PRIVACY_SRC), 'privacy.html must link it too');
     ok(!/--text-primary:\s*#/.test(stripComments(APP_SRC)),
        'an inlined copy is drift with a delay fuse — a pack change misses it silently');
+  });
+  t('a disabled button looks disabled — pack rule 20 reaches this page’s buttons', () => {
+    /* Wine Cellar's Save sat disabled at full strength (2026-10-23): this page's
+       own `button { cursor: pointer }` out-ranked everything the browser greys,
+       and a zero-specificity first try at the pack rule lost the cursor to it.
+       Measured on a real primary, at rest AND under the app's own :hover. */
+    const b = W.document.getElementById('shareCopyBtn');
+    ok(b, 'the share window’s primary button exists');
+    const was = b.disabled;
+    try {
+      b.disabled = false;
+      eq(W.getComputedStyle(b).opacity, '1', 'an enabled primary is at full strength');
+      b.disabled = true;
+      const cs = W.getComputedStyle(b);
+      eq(cs.opacity, '0.45', 'a disabled one is dimmed');
+      eq(cs.cursor, 'not-allowed', 'and says so under the pointer');
+    } finally { b.disabled = was; }
+    ok(/button:disabled \{ opacity: \.45; cursor: not-allowed; \}/.test(THEME_SRC || ''),
+       'the rule comes from theme.css, not from a copy in this page');
   });
   t('privacy.html carries style-src ‘self’, or the link is silently blocked', () => {
     const csp = (PRIVACY_SRC.match(/Content-Security-Policy" content="([^"]*)"/) || [])[1] || '';
