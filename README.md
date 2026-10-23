@@ -114,6 +114,12 @@ breaking a render on purpose and watching the suite go red where nothing else no
   `left`/`bottom` and parks it in the top-left corner of the screen.
 - **The footer's colour and size go on `<footer>`**, not on each paragraph — `margin: 34px 0 0`
   per paragraph puts 34px above all three and the block falls apart.
+- **Select-on-focus must never cancel a number box's mouse release, and must know WHICH box was
+  pressed.** Chrome stops a spin arrow repeating only when it sees the release; cancel it and one
+  click on an arrow steps on and on by itself. The handler remembers the element pressed
+  (`pressedOn`) and arms its cancel only when that press focused that same text box. A wheel
+  listener beside it takes the focus off a number box, because Chrome steps a focused one on every
+  scroll tick.
 - **A header `<select>` needs `width: auto`.** The base field rule gives every select
   `width: 100%`, which in a wrapping flex row makes the theme picker claim the whole line.
 - **The arrows beside a scrolling row sit OUTSIDE the thing they scroll.** Inside the tablist
