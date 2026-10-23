@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 147;
+const EXPECTED = 150;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -1304,12 +1304,38 @@ function define() {
       .forEach(ty => ok(css.indexOf('input[type="' + ty + '"]') > -1,
         ty + ' is missing — a field left off arrives silently unstyled'));
   });
+  t('an installed iPhone: nothing sits under the notch', () => {
+    /* Found in Wine Cellar on Charles's iPhone, 2026-10-23: the header under
+       the clock, scrolled content sliding beneath it, a tall window's heading
+       behind it. */
+    const css = (stripComments(APP_SRC).match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+    ok(/header \{[^}]*padding-top: calc\(10px \+ env\(safe-area-inset-top\)\)/.test(css),
+       'the header clears the status bar');
+    ok(/body::before \{[^}]*position: fixed;[^}]*height: env\(safe-area-inset-top\)/.test(css),
+       'a pinned band keeps scrolled content out from under the clock');
+    ok(/dialog \{ max-height: calc\(100vh[^}]*max\(env\(safe-area-inset-top\), env\(safe-area-inset-bottom\)\)/.test(css),
+       'and a tall window stops short of it');
+  });
+  t('the footer sits in the same column as a card’s text, both sides', () => {
+    ok(/\.privacy \{[^}]*padding: 0 19px;/.test(stripComments(APP_SRC)), 'padding on the left AND the right');
+  });
   t('raisesKeyboard is a whitelist, so a new field type is never swept in', () => {
     ok(H.raisesKeyboard({ tagName: 'INPUT', type: 'text' }));
     ok(H.raisesKeyboard({ tagName: 'TEXTAREA' }));
     ok(!H.raisesKeyboard({ tagName: 'INPUT', type: 'checkbox' }), 'a checkbox raises nothing');
     ok(!H.raisesKeyboard({ tagName: 'INPUT', type: 'date' }), 'a date opens a picker, not a keyboard');
     ok(!H.raisesKeyboard({ tagName: 'BUTTON' }));
+  });
+  t('a dropdown or picker opens on focus, so a window never opens on one', () => {
+    /* iOS 26 opens a focused <select>'s menu at once: Wine Cellar's Share and
+       Settings windows opened with their first dropdown already down (Charles,
+       iPhone, 2026-10-23). openModal() asks opensOnFocus(), not raisesKeyboard(). */
+    ok(H.opensOnFocus({ tagName: 'SELECT' }), 'a select');
+    ok(H.opensOnFocus({ tagName: 'INPUT', type: 'time' }), 'a time picker');
+    ok(H.opensOnFocus({ tagName: 'INPUT', type: 'text' }), 'and everything that raises the keyboard');
+    ok(!H.opensOnFocus({ tagName: 'INPUT', type: 'checkbox' }), 'a checkbox opens nothing');
+    ok(!H.opensOnFocus({ tagName: 'BUTTON' }), 'nor a button');
+    ok(!H.opensOnFocus(null), 'nor nothing focused');
   });
   t('[hidden] beats a class that sets display', () => {
     /* The browser's own [hidden] rule is in the USER-AGENT stylesheet, and any

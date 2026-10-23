@@ -258,7 +258,17 @@
      columns and the strapline then wraps inside its own narrow column on a phone
      instead of running on below. */
   header { position: sticky; top: 0; z-index: 20; background: var(--surface);
-           border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px; }
+           border-bottom: 1px solid var(--border); padding: 10px 0; margin-bottom: 20px;
+           /* Installed on an iPhone, the page runs UNDER the status bar
+              (black-translucent), so the bar clears the notch itself and its
+              own background fills the space — PAPTrack's line. */
+           padding-top: calc(10px + env(safe-area-inset-top)); }
+  /* The status bar's own band, painted in the header's colour and pinned. On a
+     phone the header is not sticky, so without this every scroll slid the page
+     under the clock and the battery (Wine Cellar, Charles's iPhone,
+     2026-10-23). Zero tall everywhere there is no notch. */
+  body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; z-index: 25;
+                 height: env(safe-area-inset-top); background: var(--surface); }
   /* A KEYBOARD FOCUS NEVER LANDS UNDER THE PINNED BAR (2026-09-14). The
      browser's own scroll to a focused control — Tab, and above all Shift+Tab
      back up the page — lines it up with the top of the WINDOW, which is where
@@ -945,6 +955,13 @@
            border: 1px solid var(--border-strong); border-radius: var(--radius);
            padding: var(--sp-7); max-width: 560px; width: calc(100% - var(--sp-8));
            max-height: calc(100vh - var(--sp-8)); overflow: auto; overscroll-behavior: contain; }
+  /* A tall window on an installed iPhone reached up under the status bar, its
+     heading behind the clock (Wine Cellar, 2026-10-23). A dialog is centred, so
+     the room comes off BOTH ends by the larger inset — that is what keeps its top
+     edge clear of the notch. Zero wherever there is no notch. vh, not dvh:
+     dvh resolves to 0 in some embedded engines. */
+  dialog { max-height: calc(100vh - var(--sp-8)
+             - 2 * max(env(safe-area-inset-top), env(safe-area-inset-bottom))); }
   dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
   dialog:focus { outline: none; }
   /* A dialog heading is --fs-md — the same step as a card heading, by the role
@@ -1255,7 +1272,7 @@
    document, not something to click on the way in. */
 footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
 .footnotes { flex: 1 1 320px; min-width: 0; }
-.privacy { font-size: var(--fs-xs); color: var(--text-muted); margin: 28px 0 0; padding-left: 19px; }
+.privacy { font-size: var(--fs-xs); color: var(--text-muted); margin: 28px 0 0; padding: 0 19px; }
 .privacy-links { margin-top: 6px; }
 .privacy-links a { color: var(--text-muted); }
 
@@ -2590,6 +2607,20 @@ function raisesKeyboard(el) {
     indexOf((el.type || '').toLowerCase()) !== -1;
 }
 
+/* Which controls OPEN something the moment they are focused, on a touch
+   screen: the keyboard's, plus a <select> and the date and time pickers.
+   iOS 26 opens a focused select's menu at once — Wine Cellar's Share and
+   Settings windows opened with their first dropdown already down (Charles,
+   iPhone, 2026-10-23) — so openModal() asks this, not raisesKeyboard(). */
+function opensOnFocus(el) {
+  if (!el) return false;
+  if (raisesKeyboard(el)) return true;
+  const tag = (el.tagName || '').toUpperCase();
+  if (tag === 'SELECT') return true;
+  return tag === 'INPUT' && ['date', 'time', 'datetime-local', 'month', 'week']
+    .indexOf((el.type || '').toLowerCase()) !== -1;
+}
+
 /* EVERY modal opens through here, never showModal() directly. showModal() runs
    the spec's focusing steps — the autofocus element, or failing that the first
    focusable one — so which dialogs raise a phone's keyboard is otherwise decided
@@ -2608,7 +2639,7 @@ function openModal(dlg) {
   if (!matchMedia('(pointer: coarse)').matches) return;
   const el = document.activeElement;
   if (!el || !dlg.contains(el)) return;
-  if (!raisesKeyboard(el)) return;
+  if (!opensOnFocus(el)) return;
   dlg.tabIndex = -1;
   dlg.focus();
 }
@@ -3799,7 +3830,7 @@ window.__starterTestHooks = {
      than through the dialog, so a test can cover every option without a DOM. */
   shareWindow: shareWindow,
   encodeShare: encodeShare, decodeShare: decodeShare, csvEntries: csvEntries, csvCell: csvCell,
-  raisesKeyboard: raisesKeyboard, esc: esc, todayISO: todayISO, fmt: fmt,
+  raisesKeyboard: raisesKeyboard, opensOnFocus: opensOnFocus, esc: esc, todayISO: todayISO, fmt: fmt,
   nextSort: nextSort, COLUMNS: COLUMNS, tableToRows: tableToRows, cellText: cellText,
   toCsv: toCsv, toTsv: toTsv, FORMULA_LEAD: FORMULA_LEAD, PLAIN_NUMBER: PLAIN_NUMBER,
   searchApp: searchApp, SEARCH_CAP: SEARCH_CAP,
