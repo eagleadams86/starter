@@ -285,7 +285,9 @@ async function runAsync() {
      Charles, family-wide: "should we just make them both always single line
      side scrollers?" Measured in three frames of their own — 360px, where the
      name leaves the row under its 15rem, so the controls go under it and still
-     cannot fit; 705px, where they stay BESIDE the name and scroll there
+     cannot fit; 500px, where they stay BESIDE the name and scroll there
+     (705px until the subtitle left the name on 2026-10-24: the name alone left the
+     controls room to fit there, so the frame moved in to where they overflow again)
      (Charles, the same evening: "keep buttons beside the name"); and 1600px,
      where nothing may have changed. The sample data is planted in memory first,
      since a fresh profile boots into the welcome card, which hides the tab row
@@ -330,7 +332,7 @@ async function runAsync() {
             - D.querySelector('.brand').getBoundingClientRect().top) < 16,
           pageRoom: D.documentElement.scrollWidth - FW.innerWidth,
         };
-        /* The keyboard reveal, in the 705px frame, where the controls overflow
+        /* The keyboard reveal, in the 500px frame, where the controls overflow
            BESIDE the name. A control half past a row's edge, focused, must be
            scrolled WHOLE into the row with its ring's room — the browser only
            brings in a focus target that is entirely hidden. The straddle is
@@ -338,7 +340,7 @@ async function runAsync() {
            the edge, and then nothing is half past it. The tab bar is narrowed
            by hand to get a second row to try it on, since this app's two tabs
            never overflow on their own. */
-        if (w === 705) {
+        if (w === 500) {
           const reveal = (row, items) => {
             row.scrollLeft = 0;
             let box = row.getBoundingClientRect();
@@ -416,7 +418,7 @@ async function runAsync() {
         return m;
       } finally { f.remove(); }
     };
-    asyncResults.rows = { narrow: await measure(360), mid: await measure(705), wide: await measure(1600) };
+    asyncResults.rows = { narrow: await measure(360), mid: await measure(500), wide: await measure(1600) };
   } catch (e) { asyncResults.rows = { error: e.message }; }
 
   try {
@@ -1178,7 +1180,7 @@ function define() {
     ok(!m.headNavShown && !m.tabNavShown, 'so neither row shows its arrows');
     ok(m.besideName, 'and the controls sit on the name’s line, as they always have');
   });
-  t('where the controls overflow but the name leaves room, they stay BESIDE the name and scroll there (705px)', () => {
+  t('where the controls overflow but the name leaves room, they stay BESIDE the name and scroll there (500px)', () => {
     /* Charles, 2026-09-14: "keep buttons beside the name". The first cut wrapped
        the whole row under the name the moment it did not fit; the row now takes
        whatever the name leaves and only wraps when that is under 15rem. */
@@ -1193,7 +1195,7 @@ function define() {
     /* The browser scrolls a focused element into view only when it is entirely
        hidden, so Tab onto a button half past the edge used to leave it half past
        the edge. wireScrollRow()'s focusin listener brings it in, ring room and
-       all. Tried on both rows in the 705px frame. */
+       all. Tried on both rows in the 500px frame. */
     const m = rowVerdict('mid');
     [['the header controls', m.revealHead], ['the tab bar', m.revealTabs]].forEach(([name, r]) => {
       ok(r && r.found, name + ': there is an item reaching past the edge to test with');
@@ -1212,7 +1214,7 @@ function define() {
        where the sticky bar is, and leaves one already inside the bar's band
        where it is. `html { scroll-padding-top }` from the header's measured
        height moves the window's top edge below the bar. Measured in runAsync()'s
-       705px frame, where the header is pinned. */
+       500px frame, where the header is pinned. */
     const f = rowVerdict('mid').focusUnder;
     ok(f && f.found, 'there is a control short enough to sit wholly behind the header', JSON.stringify(f));
     [['half above the window', f.straddle], ['wholly behind the header', f.under]].forEach(([name, r]) => {
