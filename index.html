@@ -827,6 +827,32 @@
      target keeps its underline. */
   tr.rowlink .rowbtn { text-decoration: none; }
 
+  /* ── The content well (theme pack rule 21) ─────────────────────────────────
+     Every box of content set inside a card — the tiles, a table, a grid of
+     records, a list drawn as cards — is ONE fill in every theme: --surface-alt,
+     edged --border at --radius-sm. The tiles (.stat) already are; this makes
+     the table one too. Never --bg and never a bare --surface: the pack's
+     surfaces climb bg < surface < surfaceAlt in Midnight and Dark but sit
+     surfaceAlt ≈ bg < surface in Light and Sepia, so either one matches the
+     tiles in one pair of themes and is the odd one out in the other. Only
+     --surface-alt is the same ROLE in all four, and the pack already gates
+     every text and status colour at 4.5:1 on it — nothing new to measure.
+     Inside a well the heading band, hover and a selected row are --surface:
+     the old hover colour IS the well now, so in the dark themes a hovered row
+     goes a shade darker. These need the well's ancestor in the selector to
+     out-rank the global `tbody tr:hover` and `tr.rowlink:hover` above. Never
+     --accent-bg behind rows of text (muted text on it is 3.43:1 in Dark), and
+     no shadow (pack rule 14). The well is drawn only while it holds a table —
+     the empty state is a sentence, not a box. A cell with its OWN background
+     (a sticky column, a total row, a status tint) must take --surface-alt
+     here too, or it shows as a stripe of the old colour.
+     AN APP BUILT FROM THIS ADDS EACH NEW WELL TO THE :is() LIST. */
+  :is(#listWrap:has(> table)) {
+    border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-alt); }
+  :is(#listWrap:has(> table)) thead th { background: var(--surface); }
+  :is(#listWrap:has(> table)) :is(tbody tr:hover, tr.rowlink:hover :is(th, td)) { background: var(--surface); }
+  :is(#listWrap:has(> table)) tbody tr:last-child :is(th, td) { border-bottom: 0; }
+
   .pill { display: inline-block; font-size: var(--fs-xs); padding: 1px var(--sp-4);
           border-radius: var(--radius-pill); border: 1.5px solid var(--border-strong);
           background: var(--surface-alt); color: var(--text-secondary); white-space: nowrap; }

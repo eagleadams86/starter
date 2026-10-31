@@ -142,6 +142,12 @@ breaking a render on purpose and watching the suite go red where nothing else no
   `.danger` further up the cascade.
 - **A delete confirmation NAMES the record.** A bare "Are you sure?" is a dialog people learn
   to click through.
+- **A table set inside a card is a content well (pack rule 21).** It takes the tiles' fill,
+  `--surface-alt`, edged `--border` at `--radius-sm`, so tiles and tables are one colour in every
+  theme; inside it the heading band and row hover are `--surface`. Never `--bg` or a bare
+  `--surface` — the pack's surfaces stack the other way round in Light and Sepia, so either one
+  is right in two themes and wrong in the other two. Add every new table or record list to the
+  `:is()` list beside the CSS comment; a cell with its own background takes `--surface-alt` too.
 - **A scroll box needs `position: relative`**, or iOS counts its full width in the document's
   scroll area and the page scrolls sideways into a band of nothing.
 - **The sample data is the demo.** A feature isn't finished until it appears there, and rows
