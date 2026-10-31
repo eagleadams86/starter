@@ -51,7 +51,7 @@
    go MISSING look exactly like tests that pass — a suite that quietly shrank to
    three checks still says "all 3 tests pass". RAISE THIS when you add tests, and
    lower it only when you retire one deliberately. */
-const EXPECTED = 154;
+const EXPECTED = 155;
 
 /* ── It refuses to run anywhere but localhost, and that is load-bearing ──────
    GitHub Pages publishes this page BESIDE the app, where the iframe below would
@@ -526,6 +526,43 @@ async function runAsync() {
                              held: held, afterSameTab: afterSameTab };
   } catch (e) { asyncResults.landing = { error: e.message }; }
   try { H.__plant(FIXTURE); W.setTab('entries'); } catch (e) { /* reported by the verdict above */ }
+
+  /* ── The chart's plot area is a content well, on the page AND full screen ──
+     Pack rule 21, "charts are wells too" (2026-10-31). Measured, not read off
+     the source: the drawing is made at the box's own size, so the claim worth
+     pinning is that it is made at the size INSIDE the well's padding — on the
+     card and in the overlay, which moves the same box. The sample data is
+     planted for the bars; the fixture goes back afterwards. */
+  try {
+    const D = W.document;
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    const snap = () => {
+      const wrap = D.getElementById('chartWrap'), svg = wrap.querySelector('svg.chart');
+      const cs = W.getComputedStyle(wrap);
+      const pl = parseFloat(cs.paddingLeft), pr = parseFloat(cs.paddingRight);
+      const pt = parseFloat(cs.paddingTop), pb = parseFloat(cs.paddingBottom);
+      return { fill: cs.backgroundColor, edge: cs.borderTopStyle, pad: Math.min(pl, pr, pt, pb),
+        tile: W.getComputedStyle(D.querySelector('.stat')).backgroundColor,
+        inner: Math.round(wrap.clientWidth - pl - pr) + ' ' + Math.round(wrap.clientHeight - pt - pb),
+        vb: svg ? svg.getAttribute('viewBox') : null,
+        svgH: svg ? Math.round(svg.getBoundingClientRect().height) : 0 };
+    };
+    /* The tab first, THEN the data: drawn into a shown panel, the chart is
+       measured straight away rather than at the hidden panel's fallback size
+       and left to the ResizeObserver, which this offscreen frame does not
+       always hear from (seen 2026-10-31 — the redraw never came). */
+    W.setTab('overview');
+    H.__plant({ entries: H.sampleData(), settings: H.defaultSettings() });
+    await pause(150);
+    const page = snap();
+    D.querySelector('#chartCard > .chart-max').click();
+    for (let i = 0; i < 40 && snap().vb === page.vb; i++) await pause(50);
+    const up = snap();
+    D.querySelector('#chartCard > .chart-max').click();
+    await pause(300);
+    asyncResults.chartWell = { page: page, up: up };
+  } catch (e) { asyncResults.chartWell = { error: e.message }; }
+  try { H.__plant(FIXTURE); W.setTab('entries'); } catch (e) { /* reported by the verdict above */ }
 }
 
 /* ── The suite plants what it needs, and never trusts what it finds ──────────
@@ -664,18 +701,18 @@ function define() {
        to keep more of its colour — the rule's own reasoning, and the reason
        Sprint Velocity's one solid series sits here too. They were at 32% until
        2026-09-03; the hover state went to full strength to make room. */
-    ok(/color-mix\(in srgb, var\(--series-1\) 55%, var\(--surface\)\)/.test(bar),
-       'the fill is the series colour mixed ~45% toward the CARD, not toward white');
+    ok(/color-mix\(in srgb, var\(--series-1\) 55%, var\(--surface-alt\)\)/.test(bar),
+       'the fill is the series colour mixed ~45% toward the plot\'s WELL (the ground it sits on, pack rule 21), not toward white');
     ok(/stroke:\s*var\(--series-1\)/.test(bar), 'and the outline is the colour at full strength');
     const neg = (css.match(/\.bar\.neg\s*\{([^}]*)\}/) || [])[1] || '';
-    ok(/color-mix\(in srgb, var\(--series-2\) 55%, var\(--surface\)\)/.test(neg)
+    ok(/color-mix\(in srgb, var\(--series-2\) 55%, var\(--surface-alt\)\)/.test(neg)
        && /stroke:\s*var\(--series-2\)/.test(neg),
        'and the negative bars are the same arrangement on the ramp\'s second token');
     /* A key that does not depict the mark is worse than no key. Pinned to the
        SAME number as the bar, so the two cannot drift apart silently — which is
        exactly what raising one without the other would do. */
     const sw = (css.match(/\.legend\s+\.sw\s*\{([^}]*)\}/) || [])[1] || '';
-    ok(/color-mix\(in srgb, var\(--series-1\) 55%, var\(--surface\)\)/.test(sw)
+    ok(/color-mix\(in srgb, var\(--series-1\) 55%, var\(--surface-alt\)\)/.test(sw)
        && /border:\s*2px solid var\(--series-1\)/.test(sw),
        'and the legend swatch is a picture of that bar, at the same strength', sw.trim());
   });
@@ -1950,6 +1987,45 @@ function define() {
     } finally { el.setAttribute('data-theme', was || 'auto'); }
     ok(/:is\(#listWrap:has\(> table\)\)[^{]*:is\(tbody tr:hover, tr\.rowlink:hover/.test(APP_SRC),
        'hover inside the well is restated under the well, so it out-ranks the global surface-alt hover');
+  });
+
+  t('Content wells: the chart’s plot area is a well too, and its bars are mixed toward it (pack rule 21)', () => {
+    /* "Charts are wells too": the card keeps the name and subtitle, the box
+       the drawing sits in is the tiles' fill. The bars' tint is the one thing
+       this chart PAINTS from a ground colour, so it must resolve to the same
+       colour as a mix toward the WELL — mixed toward the card it would carry
+       the card's colour onto the well as a slightly different tint. */
+    const D = W.document, el = D.documentElement, was = el.getAttribute('data-theme');
+    const bg = (e) => W.getComputedStyle(e).backgroundColor;
+    H.__plant({ entries: H.sampleData(), settings: H.defaultSettings() });
+    try {
+      const wrap = D.getElementById('chartWrap'), tile = D.querySelector('.stat');
+      const bar = wrap.querySelector('.bar:not(.neg)'), card = D.getElementById('chartCard');
+      ok(bar && wrap.classList.contains('is-well'), 'the sample data draws bars into a well');
+      const probe = D.createElement('div');
+      D.body.appendChild(probe);
+      ['midnight', 'dark', 'light', 'sepia'].forEach((th) => {
+        el.setAttribute('data-theme', th);
+        eq(bg(wrap), bg(tile), th + ': the chart well is the tiles’ fill');
+        ok(bg(wrap) !== bg(card), th + ': and stands apart from the card');
+        eq(W.getComputedStyle(wrap).borderTopStyle, 'solid', th + ': the chart well is ruled');
+        probe.style.background = 'color-mix(in srgb, var(--series-1) 55%, var(--surface-alt))';
+        eq(W.getComputedStyle(bar).fill, bg(probe), th + ': the bar tint is mixed toward the well');
+        eq(W.getComputedStyle(D.querySelector('.legend .sw')).backgroundColor, bg(probe),
+           th + ': and the legend swatch is still a picture of that bar');
+      });
+      probe.remove();
+    } finally { el.setAttribute('data-theme', was || 'auto'); H.__plant(FIXTURE); }
+    const C = asyncResults.chartWell || {};
+    ok(!C.error, 'the chart-well walk ran', C.error);
+    const P = C.page || {}, U = C.up || {};
+    eq(P.fill, P.tile, 'on the page the plot area is the tiles’ fill (measured)');
+    ok(P.pad > 0, 'with padding so the axis labels keep off the edge', P.pad);
+    eq(P.vb, '0 0 ' + P.inner, 'the drawing is the size INSIDE the padding, so nothing is clipped or scaled');
+    eq(P.svgH, 300, 'and the plot keeps its 300px — the card grows by the padding instead');
+    eq(U.fill, U.tile, 'full screen it keeps the well');
+    eq(U.edge, 'solid', 'still ruled');
+    eq(U.vb, '0 0 ' + U.inner, 'and is drawn inside its padding up there too');
   });
 
   group('copy and CSV read the RENDERED table');

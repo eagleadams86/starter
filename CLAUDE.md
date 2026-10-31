@@ -78,6 +78,24 @@ break one app, it ships silently inside every app that hasn't been started yet.
   entry ON PURPOSE: it is the list an app built from here adds its own wells to. The starter has
   no sticky, total or tinted cells, so nothing else moved; the comment tells a copier they must.
   No tables in dialogs. Pinned by "Content wells" in four themes (red without the CSS).
+  **The chart's plot area joined the same day ("charts are wells too").** `.chart-wrap.is-well`
+  is in that `:is()` list, plus `box-sizing: content-box; padding: var(--sp-4)` of its own, so
+  the 300px stays the PLOT's height and the card grows by 18px. It is a CLASS that `renderChart`
+  toggles before it measures, not `:has(> svg)` — the drawing is made at the box's own size and
+  measured INSIDE the padding (clientWidth/Height less computed padding), so the padding must
+  exist before the svg does; the empty sentence clears it. Painted things moved: the `.bar` /
+  `.bar.neg` tint and the legend `.sw` swatches now mix toward `--surface-alt` (the ground the
+  bars sit on), not `--surface`; the tooltip was already `--surface-alt`. The full-screen view
+  moves the same box, so it keeps the well; print drops backgrounds (no print-color-adjust on
+  the wrap), so the plot prints white inside a ruled edge. The drawing's floor went 320 → 302 in
+  CSS and in `renderChart` so a 390px phone still doesn't scroll sideways. Measured (1300px):
+  plot 1230x300 → 1212x300 on the card, 1222x633 → 1204x615 full screen, nothing clipped.
+  Tests: the "Content wells: the chart's plot area…" test (four themes, bar tint and swatch
+  resolve to a mix toward the well, measured page + full-screen viewBox equals the box inside
+  the padding, via `asyncResults.chartWell`); the pack-rule-3 test now expects `--surface-alt`.
+  **Harness note:** a chart planted while the Overview panel is hidden is drawn at the 720x300
+  fallback, and in the suite's offscreen frame the ResizeObserver redraw sometimes never
+  arrives (pre-existing — same on the old code); the walk switches tab BEFORE planting.
 - **tests.html has no CI scorecard** (decided 2026-08-31). Every sibling's
   tests page names `api.github.com` in its CSP for the scorecard line; the
   starter instead models the strictest baseline — no external endpoint

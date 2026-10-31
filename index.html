@@ -658,9 +658,40 @@
   .bar.on { fill: var(--series-1); }
   .bar.neg.on { fill: var(--series-2); }
   .chart-wrap { overflow-x: auto; position: relative; height: 300px; }
+  /* ── THE PLOT AREA IS A CONTENT WELL (theme pack rule 21, 2026-10-31) ───────
+     Fill, edge and radius come from the well rule's :is() list; this adds the
+     padding that keeps axis labels off the edge. What a copier must carry:
+     - A CLASS, set by renderChart BEFORE it measures — not `:has(> svg)` like
+       the table — because the drawing is made at the box's own size and the
+       padding has to be there to be measured. The empty-state sentence clears
+       it, so "Nothing to chart yet." stays bare, as the table's does.
+     - content-box, so the 300px above stays the PLOT's height and the card
+       grows by the padding, rather than the plot shrinking by it.
+     - The drawing is measured INSIDE the padding (clientWidth/Height less the
+       computed padding), so one unit is still one pixel, in the card and in
+       the full-screen view alike — the overlay moves this same box, so it
+       keeps the well.
+     - PAINTED THINGS: anything drawn in the CARD's colour shows as a patch on
+       the well. Here that was the bar tint, mixed toward --surface; it mixes
+       toward --surface-alt now, and so does the legend swatch, which is a
+       picture of the bar. A Chart.js app has more of these and they are canvas,
+       not CSS — label plates behind a line's label, a doughnut's hole and
+       wedge borders, a point's cut-out ring, a legend box — each reads
+       --surface-alt. Survey the chart code, not the stylesheet.
+     - PAPER: the browser drops background colours on print (there is no
+       print-color-adjust here; that is for canvas), so the plot prints white
+       inside a ruled edge, as the table well does. A canvas app's beforeprint
+       swap to Light repaints its plates in Light's --surface-alt and the page
+       background still drops; check it prints white.
+     - The drawing's floor is 302px, not 320: the well's padding and edge take
+       18px, and 302 keeps a phone's sideways scroll starting at the same CARD
+       width it always did.
+     No new colour (the pack gates every text and series token on surfaceAlt)
+     and no shadow. */
+  .chart-wrap.is-well { box-sizing: content-box; padding: var(--sp-4); }
   /* Fills its box exactly, because renderChart draws the viewBox at the box's own
      measured size — so one unit is one pixel and nothing is scaled. */
-  svg.chart { display: block; width: 100%; height: 100%; min-width: 320px; }
+  svg.chart { display: block; width: 100%; height: 100%; min-width: 302px; }
   /* Pack rule 3: a tint fill plus a full-strength edge, mixed toward the CARD
      rather than toward white, which is the one constant covering all four
      themes. 55% of the colour, not 32%, and the difference is the rule's own:
@@ -672,8 +703,11 @@
      the hover state above a place to stand and cost the resting bars the
      contrast the rule exists to protect. The hover went to full strength
      instead; see the note on `.bar.on`. */
-  .bar { fill: color-mix(in srgb, var(--series-1) 55%, var(--surface)); stroke: var(--series-1); stroke-width: 2; }
-  .bar.neg { fill: color-mix(in srgb, var(--series-2) 55%, var(--surface)); stroke: var(--series-2); }
+  /* Mixed toward --surface-alt since 2026-10-31: the bars sit on the plot's
+     well now, not on the card (pack rule 21), and "toward the ground" is the
+     rule's meaning. */
+  .bar { fill: color-mix(in srgb, var(--series-1) 55%, var(--surface-alt)); stroke: var(--series-1); stroke-width: 2; }
+  .bar.neg { fill: color-mix(in srgb, var(--series-2) 55%, var(--surface-alt)); stroke: var(--series-2); }
   .gridline { stroke: var(--chart-grid); stroke-width: 1; }
   .axisline { stroke: var(--chart-tick); stroke-width: 1; }
   .ticktext { fill: var(--chart-tick); font-size: var(--fs-xs); }
@@ -763,9 +797,9 @@
      Map's Where It's Held has five accounts to separate. */
   .legend .sw { width: 22px; height: 10px; border-radius: 2px; flex: none;
                 border: 2px solid var(--series-1);
-                background: color-mix(in srgb, var(--series-1) 55%, var(--surface)); }
+                background: color-mix(in srgb, var(--series-1) 55%, var(--surface-alt)); }
   .legend .sw.two { border-color: var(--series-2);
-                    background: color-mix(in srgb, var(--series-2) 55%, var(--surface)); }
+                    background: color-mix(in srgb, var(--series-2) 55%, var(--surface-alt)); }
   .legend .sw.avg { height: 0; border: 0; border-top: 2px dashed var(--series-3);
                     border-radius: 0; background: none; }
 
@@ -846,8 +880,14 @@
      the empty state is a sentence, not a box. A cell with its OWN background
      (a sticky column, a total row, a status tint) must take --surface-alt
      here too, or it shows as a stripe of the old colour.
-     AN APP BUILT FROM THIS ADDS EACH NEW WELL TO THE :is() LIST. */
-  :is(#listWrap:has(> table)) {
+     AN APP BUILT FROM THIS ADDS EACH NEW WELL TO THE :is() LIST.
+     A CHART'S PLOT AREA IS A WELL TOO (rule 21, "charts are wells too"): the
+     card keeps the chart's name and subtitle, and the box the drawing sits in
+     (.chart-wrap.is-well) takes this rule. Three more things go with it, and
+     an app that skips them is half done — see the note at .chart-wrap:
+     anything the drawing PAINTS in the card's colour moves to --surface-alt,
+     the full-screen view keeps the box, and paper still gets a white plot. */
+  :is(#listWrap:has(> table), .chart-wrap.is-well) {
     border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-alt); }
   :is(#listWrap:has(> table)) thead th { background: var(--surface); }
   :is(#listWrap:has(> table)) :is(tbody tr:hover, tr.rowlink:hover :is(th, td)) { background: var(--surface); }
@@ -2195,6 +2235,8 @@ function renderChart(c) {
   };
   document.getElementById('chartCount').textContent =
     c.count + (c.count === 1 ? ' entry' : ' entries');
+  /* The well (pack rule 21) comes on BEFORE anything is measured — see the CSS. */
+  wrap.classList.toggle('is-well', !!c.count);
   if (!c.count) {
     wrap.innerHTML = '<p class="empty">Nothing to chart yet.</p>';
     putTipBack();
@@ -2214,8 +2256,12 @@ function renderChart(c) {
      The fallback matters — a hidden panel measures 0x0, and a chart drawn into
      that would divide by zero. 720x300 is the card's shape on a laptop, and the
      ResizeObserver below redraws the moment the panel is really shown. */
-  const box = wrap.getBoundingClientRect();
-  const W = Math.max(320, Math.round(box.width) || 720);
+  /* Measured INSIDE the well's padding: clientWidth/Height already leave out
+     its edge, and the padding comes off here. */
+  const wcs = getComputedStyle(wrap);
+  const box = { width: Math.max(0, wrap.clientWidth - parseFloat(wcs.paddingLeft) - parseFloat(wcs.paddingRight)),
+                height: Math.max(0, wrap.clientHeight - parseFloat(wcs.paddingTop) - parseFloat(wcs.paddingBottom)) };
+  const W = Math.max(302, Math.round(box.width) || 720);
   const H = Math.max(180, Math.round(box.height) || 300);
   const PAD_L = 56, PAD_R = 12, PAD_T = 12, PAD_B = 42;
   const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;

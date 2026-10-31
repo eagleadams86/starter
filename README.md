@@ -148,6 +148,12 @@ breaking a render on purpose and watching the suite go red where nothing else no
   `--surface` — the pack's surfaces stack the other way round in Light and Sepia, so either one
   is right in two themes and wrong in the other two. Add every new table or record list to the
   `:is()` list beside the CSS comment; a cell with its own background takes `--surface-alt` too.
+  **A chart's plot area is a well too:** the card keeps the chart's name and subtitle, and the
+  box the drawing sits in (`.chart-wrap.is-well`, set before the chart measures itself) gets
+  the same fill and a little padding. Anything the chart paints from a ground colour — here the
+  bar tint and its legend swatch; in a Chart.js app label plates, a doughnut's hole, point
+  rings — mixes toward `--surface-alt` now. The full-screen view keeps the box, and paper still
+  prints a white plot.
 - **A scroll box needs `position: relative`**, or iOS counts its full width in the document's
   scroll area and the page scrolls sideways into a band of nothing.
 - **The sample data is the demo.** A feature isn't finished until it appears there, and rows
