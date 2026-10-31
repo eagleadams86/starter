@@ -2261,7 +2261,7 @@ function define() {
     ok(/\.tile-help::after \{ content: ''; position: absolute; inset: -5px; \}/.test(APP_SRC),
        "a true 24px tap target: -5px, because `inset` grows from the PADDING box "
        + "and the 1px border made -4px a 22px target");
-    ok(/\.tile-help:hover \{ background: var\(--surface-alt\); border-color: var\(--text-secondary\);/
+    ok(/\.tile-help:hover \{ background: var\(--border-strong\); border-color: var\(--text-secondary\);/
        .test(APP_SRC),
        'and the hover fills rather than borrowing --focus-border, which would '
        + 'say "focused" to anybody reading the two states side by side');
